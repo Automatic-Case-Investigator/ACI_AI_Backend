@@ -1,4 +1,4 @@
-#!/home/daniel/Desktop/Projects/ACI/backend/backend_venv/bin/python3
+#!/home/daniel/Desktop/Projects/ACI/ai-backend/ACI_AI_Backend/backend_venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -1,6 +1,16 @@
 version: '3.5'
 
 services:
+  redis:
+    image: redis:latest
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    command: ["redis-server"]
+    network_mode: "host"
+  
   ollama:
     image: ollama/ollama:latest
     ports:
@@ -26,6 +36,7 @@ services:
       - model_volume:/app/models
     depends_on:
       - ollama
+      - redis
 
 volumes:
   model_volume:

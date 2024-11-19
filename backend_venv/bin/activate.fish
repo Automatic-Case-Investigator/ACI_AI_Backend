@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/home/daniel/Desktop/Projects/ACI/backend/backend_venv"
+set -gx VIRTUAL_ENV "/home/daniel/Desktop/Projects/ACI/ai-backend/ACI_AI_Backend/backend_venv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH
