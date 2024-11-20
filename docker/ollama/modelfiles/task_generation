@@ -1,0 +1,13 @@
+FROM /root/models/task_generation.gguf
+TEMPLATE """
+{{ if .System }}### Instruction:
+{{ .System }}{{ end }}
+
+{{ if .Prompt }}### Input:
+{{ .Prompt }}{{ end }}
+
+### Response:
+{{ .Response }}"""
+PARAMETER temperature 0.8
+PARAMETER top_k 40
+PARAMETER num_predict 400

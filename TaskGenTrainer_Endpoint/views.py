@@ -1,3 +1,4 @@
+from TaskGenTrainer_Endpoint.objects.task_generation_trainer.task_generation_trainer import TaskGenerationTrainer
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.http import JsonResponse
 from json import JSONDecodeError
@@ -42,7 +43,7 @@ def add_case_data(request):
                     "description": task["description"]
                 })
             
-            id = f"Case-{str(uuid.uuid4())}"
+            id = f"Case:{str(uuid.uuid4())}"
             redis_client.set(id, json.dumps(formatted_data))
             return JsonResponse({"message": "Success", "id": id})
         except (KeyError, JSONDecodeError):
@@ -127,4 +128,14 @@ def delete_case_data(request):
         return JsonResponse({"error": "Invalid method"})
 
 def train_model(request):
-    pass
+    if request.method == "POST":
+        try:
+            trainer = TaskGenerationTrainer()
+            trainer.load_model_and_tokenizer()
+            trainer.load_dataset()
+            trainer.train()
+            return JsonResponse({"message": "Success"})
+        except ValueError as e:
+            return JsonResponse({"error": str(e)})
+    else:
+        return JsonResponse({"error": "Invalid method"})

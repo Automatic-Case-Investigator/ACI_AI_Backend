@@ -12,11 +12,13 @@ services:
     network_mode: "host"
   
   ollama:
-    image: ollama/ollama:latest
+    build:
+      context: .
+      dockerfile: docker/ollama/Dockerfile
     ports:
       - 11434:11434
     volumes:
-      - model_volume:/root/.ollama/models
+      - model_volume:/root/models
     network_mode: "host"
     pull_policy: always
     tty: true
@@ -25,13 +27,11 @@ services:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
 
-  django:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/backend/Dockerfile
     network_mode: "host"
-    env_file:
-      - .env
     volumes:
       - model_volume:/app/models
     depends_on:
