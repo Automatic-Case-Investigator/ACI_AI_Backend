@@ -4,13 +4,12 @@ services:
   redis:
     image: redis:latest
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
       interval: 1s
       timeout: 3s
       retries: 5
-    command: ["redis-server"]
-    network_mode: "host"
-  
+    command: [ "redis-server" ]
+
   ollama:
     build:
       context: .
@@ -19,7 +18,6 @@ services:
       - 11434:11434
     volumes:
       - model_volume:/root/models
-    network_mode: "host"
     pull_policy: always
     tty: true
     restart: always
@@ -32,10 +30,15 @@ services:
       context: .
       dockerfile: docker/backend/Dockerfile
     ports:
-      - 8000:8001
-    network_mode: "host"
+      - 8000:8000
     volumes:
       - model_volume:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ gpu ]
     depends_on:
       - ollama
       - redis
