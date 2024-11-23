@@ -6,4 +6,5 @@ WORKDIR /root
 COPY ./docker/ollama/modelfiles/ modelfiles
 COPY ./docker/ollama/ollama_scripts/ scripts/
 RUN chmod -R +x scripts/
-CMD /root/scripts/model_autoloader.sh & ollama serve
+RUN find scripts/ -type f -exec sed -i 's/\r//' {} +
+CMD /bin/bash /root/scripts/model_autoloader.sh & ollama serve

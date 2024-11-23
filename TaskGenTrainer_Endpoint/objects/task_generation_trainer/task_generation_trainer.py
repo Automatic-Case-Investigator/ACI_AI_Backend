@@ -106,7 +106,7 @@ class TaskGenerationTrainer:
             raise ValueError("No dataset is loaded")
 
         self.dataset = Dataset.from_dict(dataset_dict)
-        dataset = dataset.map(self.formatting_prompts_func, batched=True)
+        self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
 
     def train(self):
         trainer = SFTTrainer(
@@ -121,7 +121,7 @@ class TaskGenerationTrainer:
                 per_device_train_batch_size=1,
                 gradient_accumulation_steps=4,
                 warmup_steps=5,
-                max_steps=500,
+                max_steps=250,
                 learning_rate=2e-4,
                 fp16=not is_bfloat16_supported(),
                 bf16=is_bfloat16_supported(),
@@ -139,6 +139,6 @@ class TaskGenerationTrainer:
         self.model.save_pretrained("lora_model")
         self.tokenizer.save_pretrained("lora_model")
         self.model.save_pretrained_gguf(
-            "model", tokenizer, quantization_method=["q8_0"]
+            "model", self.tokenizer, quantization_method=["q8_0"]
         )
-        os.system("mv model/unsloth.Q8_0.gguf /root/models/task_generation.gguf")
+        os.system("mv model/unsloth.Q8_0.gguf models/task_generation.gguf")
