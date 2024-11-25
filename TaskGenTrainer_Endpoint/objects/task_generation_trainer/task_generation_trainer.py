@@ -1,3 +1,4 @@
+from ACI_AI_Backend.objects.model_update_notifier.model_update_notifier import ModelUpdateNotifier
 from ACI_AI_Backend.objects.redis_client import redis_client
 from transformers import TrainingArguments
 from unsloth import is_bfloat16_supported
@@ -9,37 +10,9 @@ import os
 
 
 class TaskGenerationTrainer:
-    def formatting_prompts_func(self, examples):
-        instructions = examples["instruction"]
-        inputs = examples["input"]
-        outputs = examples["output"]
-        texts = []
-        for instruction, input, output in zip(instructions, inputs, outputs):
-            text = self.prompt_backbone.format(instruction, input, output)
-            texts.append(text)
-        return {
-            "text": texts,
-        }
-
-    def test_inference(self, model, tokenizer, dataset):
-        FastLanguageModel.for_inference(model)
-        inputs = tokenizer(
-            [
-                self.prompt_backbone.format(
-                    dataset[0]["instruction"],
-                    dataset[0]["input"],
-                    "",
-                )
-            ],
-            return_tensors="pt",
-        ).to("cuda")
-
-        outputs = model.generate(**inputs, max_new_tokens=300, use_cache=True)
-        print("Inference result")
-        print(tokenizer.batch_decode(outputs))
-
     def __init__(self):
         self.model_name = "unsloth/Llama-3.2-3B-Instruct"
+        self.dataset_key_prefix = "Case:*"
         self.max_seq_length = 2048
         self.load_in_4bit = True
         self.dtype = None
@@ -57,6 +30,18 @@ class TaskGenerationTrainer:
         self.model = None
         self.tokenizer = None
         self.dataset = None
+
+    def formatting_prompts_func(self, examples):
+        instructions = examples["instruction"]
+        inputs = examples["input"]
+        outputs = examples["output"]
+        texts = []
+        for instruction, input, output in zip(instructions, inputs, outputs):
+            text = self.prompt_backbone.format(instruction, input, output)
+            texts.append(text)
+        return {
+            "text": texts,
+        }
 
     def load_model_and_tokenizer(self):
         self.model, self.tokenizer = FastLanguageModel.from_pretrained(
@@ -88,10 +73,9 @@ class TaskGenerationTrainer:
         )
 
     def load_dataset(self):
-        prefix = "Case:*"
         dataset_dict = {"instruction": [], "input": [], "output": []}
 
-        for key in redis_client.scan_iter(match=prefix):
+        for key in redis_client.scan_iter(match=self.dataset_key_prefix):
             case_data = json.loads(redis_client.get(key))
             input_data = f"Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}"
             output_data = ""
@@ -127,7 +111,7 @@ class TaskGenerationTrainer:
                 bf16=is_bfloat16_supported(),
                 logging_steps=1,
                 optim="adamw_8bit",
-                weight_decay=0.0001,
+                weight_decay=0.00001,
                 lr_scheduler_type="linear",
                 seed=3407,
                 output_dir="outputs",
@@ -141,4 +125,10 @@ class TaskGenerationTrainer:
         self.model.save_pretrained_gguf(
             "model", self.tokenizer, quantization_method=["q8_0"]
         )
+
+        # Delete all used dataset
+        for key in redis_client.scan_iter(self.dataset_key_prefix):
+            redis_client.delete(key)
+
         os.system("mv model/unsloth.Q8_0.gguf models/task_generation.gguf")
+        ModelUpdateNotifier.notifyUpdate("task_generation")

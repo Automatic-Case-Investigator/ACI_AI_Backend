@@ -16,6 +16,7 @@ services:
       dockerfile: docker/ollama/Dockerfile
     ports:
       - 11434:11434
+      - 5555:5555
     volumes:
       - model_volume:/root/models
     pull_policy: always

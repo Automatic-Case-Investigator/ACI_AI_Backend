@@ -1,6 +1,7 @@
 from TaskGenTrainer_Endpoint.objects.task_generation_trainer.task_generation_trainer import TaskGenerationTrainer
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.http import JsonResponse
+from django.conf import settings
 from json import JSONDecodeError
 import json
 import uuid
@@ -44,7 +45,7 @@ def add_case_data(request):
                 })
             
             id = f"Case:{str(uuid.uuid4())}"
-            redis_client.set(id, json.dumps(formatted_data))
+            redis_client.set(id, json.dumps(formatted_data), ex=settings.REDIS_KEY_EXPIRY_TIME)
             return JsonResponse({"message": "Success", "id": id})
         except (KeyError, JSONDecodeError):
             return JsonResponse({"error": "Data not formatted properly"})
@@ -96,7 +97,7 @@ def set_case_data(request):
                     "description": task["description"]
                 })
             
-            redis_client.set(id, json.dumps(formatted_data))
+            redis_client.set(id, json.dumps(formatted_data), ex=settings.REDIS_KEY_EXPIRY_TIME)
             return JsonResponse({"message": "Success", "id": id})
         except (KeyError, JSONDecodeError):
             return JsonResponse({"error": "Data not formatted properly"})

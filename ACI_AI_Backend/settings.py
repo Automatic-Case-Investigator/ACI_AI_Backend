@@ -78,6 +78,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ACI_AI_Backend.wsgi.application'
 
+# Notifier settings
+NOTIFIER_HOST = os.getenv("NOTIFIER_HOST")
+NOTIFIER_PORT = os.getenv("NOTIFIER_PORT")
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -92,6 +95,7 @@ DATABASES = {
 REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_DB = 0
+REDIS_KEY_EXPIRY_TIME = os.getenv("REDIS_KEY_EXPIRY_TIME")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
