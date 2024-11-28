@@ -26,6 +26,7 @@ fsspec==2024.9.0
 gast==0.6.0
 google-pasta==0.2.0
 grpcio==1.67.0
+gguf==0.10.0
 h11==0.14.0
 h5py==3.12.1
 hf_transfer==0.1.8

@@ -132,9 +132,20 @@ def train_model(request):
     if request.method == "POST":
         try:
             trainer = TaskGenerationTrainer()
-            trainer.load_model_and_tokenizer()
             trainer.load_dataset()
+            trainer.load_model_tokenizer_locally()
             trainer.train()
+            return JsonResponse({"message": "Success"})
+        except ValueError as e:
+            return JsonResponse({"error": str(e)})
+    else:
+        return JsonResponse({"error": "Invalid method"})
+
+def restore_baseline(request):
+    if request.method == "POST":
+        try:
+            trainer = TaskGenerationTrainer()
+            trainer.load_baseline()
             return JsonResponse({"message": "Success"})
         except ValueError as e:
             return JsonResponse({"error": str(e)})

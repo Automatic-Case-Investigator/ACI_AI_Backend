@@ -1,4 +1,4 @@
-FROM /root/models/task_generation.gguf
+FROM /root/gguf_shared/task_generation.gguf
 TEMPLATE """
 {{ if .System }}### Instruction:
 {{ .System }}{{ end }}

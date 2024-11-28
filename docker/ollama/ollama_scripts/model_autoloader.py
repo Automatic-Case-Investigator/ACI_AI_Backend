@@ -4,7 +4,7 @@ import os
 
 HOST = '0.0.0.0'
 PORT = 5555
-MONITORING_DIR = "/root/models/"
+MONITORING_DIR = "/root/gguf_shared/"
 TARGET_EXTENSION = ".gguf"
 
 def load_models():

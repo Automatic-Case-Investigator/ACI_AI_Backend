@@ -18,7 +18,7 @@ services:
       - 11434:11434
       - 5555:5555
     volumes:
-      - model_volume:/root/models
+      - gguf_volume:/root/gguf_shared
     pull_policy: always
     tty: true
     restart: always
@@ -33,6 +33,7 @@ services:
     ports:
       - 8000:8000
     volumes:
+      - gguf_volume:/app/gguf_shared
       - model_volume:/app/models
     deploy:
       resources:
@@ -45,4 +46,5 @@ services:
       - redis
 
 volumes:
+  gguf_volume:
   model_volume:
