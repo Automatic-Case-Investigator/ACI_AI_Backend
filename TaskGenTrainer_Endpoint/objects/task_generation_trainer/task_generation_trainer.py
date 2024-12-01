@@ -30,7 +30,7 @@ class TaskGenerationTrainer:
 
         ### Response:
         {}"""
-        self.instruction = "You are a soc analyst. You received a case in the soar platform, including detailed information about an alert. Based on the case information, list only the tasks you would suggest to create for investigating the incident. For each task, write only one sentence for title and description. Your answer should follow this format:Task # Title: <title> Description: <description>... Here is the decoded data of the case:"
+        self.instruction = "You are a soc analyst. You received a case in the soar platform, including detailed information about an alert. The title section includes a brief description of the case, and the description section includes detailed information about the case. Based on the case information, list only the tasks you would suggest to create for investigating the incident. For each task, write only one sentence for title and description. Your answer should follow this format:Task # Title: <title> Description: <description>... Here is the decoded data of the case:"
 
         self.model = None
         self.tokenizer = None
@@ -59,7 +59,10 @@ class TaskGenerationTrainer:
         ModelUpdateNotifier.notify_update(self.model_name)
 
     def load_model_tokenizer_locally(self):
-        self.model, self.tokenizer = FastLanguageModel.from_pretrained(self.local_model_dir)
+        try:
+            self.model, self.tokenizer = FastLanguageModel.from_pretrained(self.local_model_dir)
+        except:
+            self.load_baseline()
 
     def load_dataset(self):
         dataset_dict = {"instruction": [], "input": [], "output": []}
@@ -81,7 +84,7 @@ class TaskGenerationTrainer:
         self.dataset = Dataset.from_dict(dataset_dict)
         self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
 
-    def train(self):
+    def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
         trainer = SFTTrainer(
             model=self.model,
             tokenizer=self.tokenizer,
@@ -92,17 +95,17 @@ class TaskGenerationTrainer:
             packing=False,
             args=TrainingArguments(
                 per_device_train_batch_size=1,
-                gradient_accumulation_steps=4,
+                gradient_accumulation_steps=gradient_accumulation_steps,
                 warmup_steps=5,
-                max_steps=250,
-                learning_rate=2e-4,
+                max_steps=max_steps,
+                learning_rate=learning_rate,
                 fp16=not is_bfloat16_supported(),
                 bf16=is_bfloat16_supported(),
                 logging_steps=1,
                 optim="adamw_8bit",
-                weight_decay=0.00001,
+                weight_decay=weight_decay,
                 lr_scheduler_type="linear",
-                seed=3407,
+                seed=seed,
                 output_dir="outputs",
             ),
         )

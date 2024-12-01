@@ -37,9 +37,7 @@ def set_case_data(request):
             request_data = json.loads(request.body)
             if "id" not in request_data.keys():
                 return JsonResponse({"error": "Required field missing"})
-            
-            id = request_data["id"]
-        
+                    
             formatted_data = dict()
             formatted_data["title"] = request_data["title"]
             formatted_data["description"] = request_data["description"]
@@ -50,6 +48,7 @@ def set_case_data(request):
                     "description": task["description"]
                 })
             
+            id = f"Case:{str(uuid.uuid4())}"
             redis_client.set(id, json.dumps(formatted_data), ex=settings.REDIS_KEY_EXPIRY_TIME)
             return JsonResponse({"message": "Success", "id": id})
         except (KeyError, JSONDecodeError):
@@ -84,13 +83,27 @@ def delete_case_data(request):
 def train_model(request):
     if request.method == "POST":
         try:
+            seed = int(request.POST.get("seed"))
+            max_steps = int(request.POST.get("max_steps"))
+            learning_rate = float(request.POST.get("learning_rate"))
+            gradient_accumulation_steps = int(request.POST.get("gradient_accumulation_steps"))
+            weight_decay = float(request.POST.get("weight_decay"))
+            
             trainer = TaskGenerationTrainer()
             trainer.load_dataset()
             trainer.load_model_tokenizer_locally()
-            trainer.train()
+            trainer.train(
+                seed=seed,
+                max_steps=max_steps,
+                learning_rate=learning_rate,
+                gradient_accumulation_steps=gradient_accumulation_steps,
+                weight_decay=weight_decay
+            )
             return JsonResponse({"message": "Success"})
         except ValueError as e:
             return JsonResponse({"error": str(e)})
+        except TypeError:
+            return JsonResponse({"error": "Required fields have invalid format"})
     else:
         return JsonResponse({"error": "Invalid method"})
 
