@@ -17,5 +17,5 @@ Including another URLconf
 from django.urls import path, include
 
 urlpatterns = [
-    path("task_generation_model/", include("TaskGenTrainer_Endpoint.urls")),
+    path("task_generation_model/", include("TaskGeneration_Endpoint.urls")),
 ]

@@ -10,22 +10,6 @@ services:
       retries: 5
     command: [ "redis-server" ]
 
-  ollama:
-    build:
-      context: .
-      dockerfile: docker/ollama/Dockerfile
-    ports:
-      - 11434:11434
-      - 5555:5555
-    volumes:
-      - gguf_volume:/root/gguf_shared
-    pull_policy: always
-    tty: true
-    restart: always
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_HOST=0.0.0.0
-
   backend:
     build:
       context: .
@@ -33,7 +17,6 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - gguf_volume:/app/gguf_shared
       - model_volume:/app/models
     deploy:
       resources:
@@ -42,7 +25,6 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
     depends_on:
-      - ollama
       - redis
 
 volumes:

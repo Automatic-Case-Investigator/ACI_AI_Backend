@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'TaskGenTrainer_Endpoint'
+    'rest_framework',
+    'TaskGeneration_Endpoint'
 ]
 
 MIDDLEWARE = [
@@ -77,10 +78,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ACI_AI_Backend.wsgi.application'
-
-# Notifier settings
-NOTIFIER_HOST = os.getenv("NOTIFIER_HOST")
-NOTIFIER_PORT = os.getenv("NOTIFIER_PORT")
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -120,11 +117,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 

@@ -1,6 +1,5 @@
-from ACI_AI_Backend.objects.model_update_notifier.model_update_notifier import ModelUpdateNotifier
-from ACI_AI_Backend.objects.redis_client import redis_client
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
+from ACI_AI_Backend.objects.redis_client import redis_client
 from huggingface_hub import hf_hub_download
 from unsloth import is_bfloat16_supported
 from unsloth import FastLanguageModel
@@ -35,7 +34,7 @@ class TaskGenerationTrainer:
         self.model = None
         self.tokenizer = None
         self.dataset = None
-
+    
     def formatting_prompts_func(self, examples):
         instructions = examples["instruction"]
         inputs = examples["input"]
@@ -50,17 +49,25 @@ class TaskGenerationTrainer:
     
     def load_baseline(self):
         if not os.path.exists(self.local_model_dir) or not os.path.isdir(self.local_model_dir):
-            os.system(f"mkdir {self.local_model_dir}")
+            os.system(f"mkdir -p {self.local_model_dir}")
 
-        self.model, self.tokenizer = FastLanguageModel.from_pretrained(self.repo_name)
-        self.model.save_pretrained_gguf(self.local_exported_dir, self.tokenizer, quantization_method = ["q8_0"])
-        os.system(f"mv {self.local_exported_dir}/unsloth.Q8_0.gguf {self.gguf_model_dir}/{self.model_name}.gguf")
-        
-        ModelUpdateNotifier.notify_update(self.model_name)
+        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+            self.repo_name,
+            max_seq_length=self.max_seq_length,
+            dtype = self.dtype,
+            load_in_4bit = self.load_in_4bit,
+        )
+        self.model.save_pretrained(self.local_model_dir)
+        self.tokenizer.save_pretrained(self.local_model_dir)
 
     def load_model_tokenizer_locally(self):
         try:
-            self.model, self.tokenizer = FastLanguageModel.from_pretrained(self.local_model_dir)
+            self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+                self.local_model_dir,
+                max_seq_length=self.max_seq_length,
+                dtype = self.dtype,
+                load_in_4bit = self.load_in_4bit,
+            )
         except:
             self.load_baseline()
 
@@ -113,13 +120,7 @@ class TaskGenerationTrainer:
         trainer.train()
         self.model.save_pretrained(self.local_model_dir)
         self.tokenizer.save_pretrained(self.local_model_dir)
-        self.model.save_pretrained_gguf(
-            self.local_exported_dir, self.tokenizer, quantization_method=["q8_0"]
-        )
 
         # Delete all used dataset
         for key in redis_client.scan_iter(self.dataset_key_prefix):
             redis_client.delete(key)
-
-        os.system(f"mv {self.local_exported_dir}/unsloth.Q8_0.gguf {self.gguf_model_dir}/{self.model_name}.gguf")
-        ModelUpdateNotifier.notify_update(self.model_name)
