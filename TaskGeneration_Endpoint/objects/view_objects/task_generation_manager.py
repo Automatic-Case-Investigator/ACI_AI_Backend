@@ -17,7 +17,8 @@ class TaskGenerationManager(APIView):
         if case_title is None or case_description is None:
             return Response({"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({"result": task_generator.generate_task(title=case_title, description=case_description)}, status=status.HTTP_200_OK)
+        task_data = task_generator.generate_task(title=case_title, description=case_description)
+        return Response({"result": task_data}, status=status.HTTP_200_OK)
 
 class CaseTemporaryStorageManager(APIView):
     def post(self, request, *args, **kwargs):

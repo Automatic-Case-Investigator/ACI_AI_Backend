@@ -4,6 +4,7 @@ from huggingface_hub import hf_hub_download
 from unsloth import is_bfloat16_supported
 from unsloth import FastLanguageModel
 from datasets import Dataset
+from django.conf import settings
 from trl import SFTTrainer
 import json
 import os
@@ -11,15 +12,19 @@ import os
 
 class TaskGenerationTrainer:
     def __init__(self):
-        self.repo_name = "acezxn/SOC_Task_Generation_Base"
-        self.model_name = "task_generation"
-        self.dataset_key_prefix = "Case:*"
-        self.local_model_dir = "./models/task_generation/model/"
-        self.local_exported_dir = "./models/task_generation/exported/"
-        self.gguf_model_dir = "./gguf_shared/"
-        self.max_seq_length = 2048
-        self.load_in_4bit = True
-        self.dtype = None
+        file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
+        config = json.load(file)
+        
+        self.repo_name = config["repo_name"]
+        self.model_name = config["model_name"]
+        self.dataset_key_prefix = config["dataset_key_prefix"]
+        self.local_model_dir = config["local_model_dir"]
+        self.instruction = config["instruction"]
+        self.max_seq_length = config["max_seq_length"]
+        self.load_in_4bit = config["load_in_4bit"]
+        self.dtype = config["dtype"]
+        file.close()
+        
         self.prompt_backbone = """
         ### Instruction:
         {}
@@ -29,8 +34,7 @@ class TaskGenerationTrainer:
 
         ### Response:
         {}"""
-        self.instruction = "You are a soc analyst. You received a case in the soar platform, including detailed information about an alert. The title section includes a brief description of the case, and the description section includes detailed information about the case. Based on the case information, list only the tasks you would suggest to create for investigating the incident. For each task, write only one sentence for title and description. Your answer should follow this format:Task # Title: <title> Description: <description>... Here is the decoded data of the case:"
-
+        
         self.model = None
         self.tokenizer = None
         self.dataset = None

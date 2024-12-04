@@ -81,7 +81,6 @@ WSGI_APPLICATION = 'ACI_AI_Backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -93,6 +92,9 @@ REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_DB = 0
 REDIS_KEY_EXPIRY_TIME = os.getenv("REDIS_KEY_EXPIRY_TIME")
+
+# Model configurations
+TASK_GENERATION_CONFIG_PATH = "TaskGeneration_Endpoint/constants/task_generation/config.json"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
