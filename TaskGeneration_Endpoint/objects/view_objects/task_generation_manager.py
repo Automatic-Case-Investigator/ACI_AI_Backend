@@ -1,4 +1,5 @@
 from TaskGeneration_Endpoint.objects.task_generation.task_generation_trainer import TaskGenerationTrainer
+from TaskGeneration_Endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
 from TaskGeneration_Endpoint.objects.task_generation.task_generator import task_generator
 from ACI_AI_Backend.objects.redis_client import redis_client
 from rest_framework.response import Response
@@ -9,6 +10,7 @@ from json import JSONDecodeError
 import requests
 import json
 import uuid
+import traceback
 
 class TaskGenerationManager(APIView):
     def post(self, request, *args, **kwargs):
@@ -94,6 +96,7 @@ class TaskGenTrainerManager(APIView):
             task_generator.__init__()
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
+            print(traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except TypeError:
             return Response({"error": "Required fields have invalid format"}, status=status.HTTP_400_BAD_REQUEST)
@@ -103,7 +106,8 @@ class RestoreManager(APIView):
         try:
             trainer = TaskGenerationTrainer()
             trainer.load_baseline()
-            task_generator.__init__()
+            TaskGenerationModel.load()
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
+            print(traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

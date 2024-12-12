@@ -1,6 +1,7 @@
+from TaskGeneration_Endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from ACI_AI_Backend.objects.redis_client import redis_client
-from huggingface_hub import hf_hub_download
+from huggingface_hub import snapshot_download
 from unsloth import is_bfloat16_supported
 from unsloth import FastLanguageModel
 from datasets import Dataset
@@ -35,8 +36,6 @@ class TaskGenerationTrainer:
         ### Response:
         {}"""
         
-        self.model = None
-        self.tokenizer = None
         self.dataset = None
     
     def formatting_prompts_func(self, examples):
@@ -55,25 +54,10 @@ class TaskGenerationTrainer:
         if not os.path.exists(self.local_model_dir) or not os.path.isdir(self.local_model_dir):
             os.system(f"mkdir -p {self.local_model_dir}")
 
-        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
-            self.repo_name,
-            max_seq_length=self.max_seq_length,
-            dtype = self.dtype,
-            load_in_4bit = self.load_in_4bit,
-        )
-        self.model.save_pretrained(self.local_model_dir)
-        self.tokenizer.save_pretrained(self.local_model_dir)
+        snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
 
     def load_model_tokenizer_locally(self):
-        try:
-            self.model, self.tokenizer = FastLanguageModel.from_pretrained(
-                self.local_model_dir,
-                max_seq_length=self.max_seq_length,
-                dtype = self.dtype,
-                load_in_4bit = self.load_in_4bit,
-            )
-        except:
-            self.load_baseline()
+        TaskGenerationModel.load()
 
     def load_dataset(self):
         dataset_dict = {"instruction": [], "input": [], "output": []}
@@ -97,8 +81,8 @@ class TaskGenerationTrainer:
 
     def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
         trainer = SFTTrainer(
-            model=self.model,
-            tokenizer=self.tokenizer,
+            model=TaskGenerationModel.model,
+            tokenizer=TaskGenerationModel.tokenizer,
             train_dataset=self.dataset,
             dataset_text_field="text",
             max_seq_length=self.max_seq_length,
@@ -122,8 +106,8 @@ class TaskGenerationTrainer:
         )
 
         trainer.train()
-        self.model.save_pretrained(self.local_model_dir)
-        self.tokenizer.save_pretrained(self.local_model_dir)
+        TaskGenerationModel.model.save_pretrained(self.local_model_dir)
+        TaskGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
 
         # Delete all used dataset
         for key in redis_client.scan_iter(self.dataset_key_prefix):
