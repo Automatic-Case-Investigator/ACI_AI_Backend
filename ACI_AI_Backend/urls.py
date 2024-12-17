@@ -15,7 +15,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path, include
+from .objects.view_objects.test_connection import TestConnection
 
 urlpatterns = [
+    path("test_connection/", TestConnection.as_view()),
     path("task_generation_model/", include("TaskGeneration_Endpoint.urls")),
 ]
