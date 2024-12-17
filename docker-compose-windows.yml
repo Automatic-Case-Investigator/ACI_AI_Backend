@@ -16,6 +16,8 @@ services:
       dockerfile: docker/backend/Dockerfile
     ports:
       - 8001:8000
+    networks:
+      - aci_backend_backend_net
     volumes:
       - model_volume:/app/models
     deploy:
@@ -26,6 +28,11 @@ services:
               capabilities: [ gpu ]
     depends_on:
       - redis
+
+networks:
+  # the same network as the network used by aci_backend
+  aci_backend_backend_net:
+    external: true
 
 volumes:
   gguf_volume:
