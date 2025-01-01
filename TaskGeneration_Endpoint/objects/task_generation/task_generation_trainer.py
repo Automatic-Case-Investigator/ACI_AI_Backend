@@ -3,11 +3,13 @@ from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from ACI_AI_Backend.objects.redis_client import redis_client
 from huggingface_hub import snapshot_download
 from unsloth import is_bfloat16_supported
-from unsloth import FastLanguageModel
 from datasets import Dataset
 from django.conf import settings
 from trl import SFTTrainer
+from hashlib import sha256
+import shutil
 import json
+import time
 import os
 
 
@@ -19,6 +21,7 @@ class TaskGenerationTrainer:
         self.repo_name = config["repo_name"]
         self.model_name = config["model_name"]
         self.dataset_key_prefix = config["dataset_key_prefix"]
+        self.workspace_dir = config["workspace_dir"]
         self.local_model_dir = config["local_model_dir"]
         self.instruction = config["instruction"]
         self.max_seq_length = config["max_seq_length"]
@@ -55,6 +58,12 @@ class TaskGenerationTrainer:
             os.system(f"mkdir -p {self.local_model_dir}")
 
         snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
+
+    def backup_model(self):
+        current_timestamp = time.time()
+        zip_name = sha256(str(current_timestamp).encode('utf-8')).hexdigest()
+        shutil.make_archive(self.workspace_dir + zip_name, 'zip', self.local_model_dir)
+        return self.workspace_dir + zip_name + ".zip"
 
     def load_model_tokenizer_locally(self):
         TaskGenerationModel.load()

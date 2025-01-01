@@ -20,6 +20,7 @@ services:
       - aci_backend_backend_net
     volumes:
       - model_volume:/app/models
+      - db_volume:/app/database
     deploy:
       resources:
         reservations:
@@ -35,5 +36,5 @@ networks:
     external: true
 
 volumes:
-  gguf_volume:
+  db_volume:
   model_volume:

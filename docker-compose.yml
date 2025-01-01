@@ -18,6 +18,7 @@ services:
       - 8001:8000
     volumes:
       - model_volume:/app/models
+      - db_volume:/app/database
     deploy:
       resources:
         reservations:
@@ -28,5 +29,5 @@ services:
       - redis
 
 volumes:
-  gguf_volume:
+  db_volume:
   model_volume:
