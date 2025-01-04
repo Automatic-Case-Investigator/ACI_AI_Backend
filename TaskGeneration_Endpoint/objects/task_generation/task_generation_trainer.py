@@ -73,10 +73,10 @@ class TaskGenerationTrainer:
 
         for key in redis_client.scan_iter(match=self.dataset_key_prefix):
             case_data = json.loads(redis_client.get(key))
-            input_data = f"Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}".replace("\r", "")
+            input_data = f'Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}'.replace("\r", "")
             output_data = ""
             for index in range(len(case_data["tasks"])):
-                output_data += f"Task #{index + 1}\nTitle: {case_data["tasks"][index]["title"]}\nDescription: {case_data["tasks"][index]["description"]}\n\n".replace("\r", "")
+                output_data += f'Task #{index + 1}\nTitle: {case_data["tasks"][index]["title"]}\nDescription: {case_data["tasks"][index]["description"]}\n\n'.replace("\r", "")
 
             dataset_dict["instruction"].append(self.instruction)
             dataset_dict["input"].append(input_data)

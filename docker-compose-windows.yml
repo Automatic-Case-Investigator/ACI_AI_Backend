@@ -29,6 +29,7 @@ services:
               capabilities: [ gpu ]
     depends_on:
       - redis
+    runtime: nvidia
 
 networks:
   # the same network as the network used by aci_backend
