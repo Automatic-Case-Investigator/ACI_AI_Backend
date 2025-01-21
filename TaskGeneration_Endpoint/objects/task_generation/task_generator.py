@@ -3,7 +3,6 @@ from TaskGeneration_Endpoint.objects.task_generation.task_generation_model impor
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import hf_hub_download
 from unsloth import is_bfloat16_supported
-from unsloth import FastLanguageModel
 from django.conf import settings
 from datasets import Dataset
 from trl import SFTTrainer
@@ -30,11 +29,12 @@ class TaskGenerator:
         ### Response:
         {}"""
         file.close()
-        
-        TaskGenerationModel.load()
     
     def generate_task(self, title, description):
         with inference_lock:
+            if TaskGenerationModel.model is None or TaskGenerationModel.tokenizer is None:
+                TaskGenerationModel.load()
+
             input_string = f"Title:{title}\n\nDescription:{description}"
             inputs = TaskGenerationModel.tokenizer(
             [

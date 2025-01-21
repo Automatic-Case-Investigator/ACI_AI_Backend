@@ -1,5 +1,5 @@
 from django.urls import path
-from .objects.view_objects.task_generation_manager import *
+from .objects.view_objects.task_generation_view import *
 
 urlpatterns = [
     path("history/", HistoryView.as_view()),

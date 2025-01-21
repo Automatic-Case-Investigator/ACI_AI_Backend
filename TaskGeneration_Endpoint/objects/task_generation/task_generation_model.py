@@ -1,5 +1,6 @@
 from unsloth import FastLanguageModel
 from django.conf import settings
+import torch
 import json
 import os
 
@@ -45,3 +46,13 @@ class TaskGenerationModel:
             FastLanguageModel.for_inference(TaskGenerationModel.model)
         except Exception as e:
             print(e)
+
+    @classmethod
+    def unload(self):
+        del TaskGenerationModel.model
+        del TaskGenerationModel.tokenizer
+        
+        TaskGenerationModel.model = None
+        TaskGenerationModel.tokenizer = None
+        
+        torch.cuda.empty_cache()

@@ -87,6 +87,10 @@ class TaskGenerationTrainer:
 
         self.dataset = Dataset.from_dict(dataset_dict)
         self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
+        
+        # Delete all used dataset
+        for key in redis_client.scan_iter(self.dataset_key_prefix):
+            redis_client.delete(key)
 
     def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
         trainer = SFTTrainer(
@@ -117,7 +121,3 @@ class TaskGenerationTrainer:
         trainer.train()
         TaskGenerationModel.model.save_pretrained(self.local_model_dir)
         TaskGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
-
-        # Delete all used dataset
-        for key in redis_client.scan_iter(self.dataset_key_prefix):
-            redis_client.delete(key)

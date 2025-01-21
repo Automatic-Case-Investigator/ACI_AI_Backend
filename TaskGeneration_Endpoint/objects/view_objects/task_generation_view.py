@@ -12,8 +12,8 @@ from json import JSONDecodeError
 import subprocess
 import traceback
 import requests
+import hashlib
 import json
-import uuid
 import os
 
 file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
@@ -53,10 +53,7 @@ class CaseTemporaryStorageView(APIView):
         """
         try:
             request_data = json.loads(request.body)
-            if "id" not in request_data.keys():
-                return Response({"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST)
             
-                    
             formatted_data = dict()
             formatted_data["title"] = request_data["title"]
             formatted_data["description"] = request_data["description"]
@@ -67,11 +64,21 @@ class CaseTemporaryStorageView(APIView):
                     "description": task["description"]
                 })
             
-            id = f"Case:{str(uuid.uuid4())}"
+            id_hash = hashlib.sha256(request_data["id"].encode()).hexdigest()
+            title_hash = hashlib.sha256(formatted_data["title"].encode()).hexdigest()
+            description_hash = hashlib.sha256(formatted_data["description"].encode()).hexdigest()
+            tasks_hash = hashlib.sha256(str(formatted_data["tasks"]).encode()).hexdigest()
+            
+            id = f"Case:{id_hash + title_hash + description_hash + tasks_hash}"
+            key_prefix = f"Case:{id_hash + title_hash + description_hash}*"
+            
+            for key in redis_client.scan_iter(match=key_prefix):
+                redis_client.delete(key)
+                
             redis_client.set(id, json.dumps(formatted_data), ex=settings.REDIS_KEY_EXPIRY_TIME)
             return Response({"message": "Success", "id": id}, status=status.HTTP_200_OK)
         except (KeyError, JSONDecodeError):
-            return JsonResponse({"error": "Data not formatted properly"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Data not formatted properly"}, status=status.HTTP_400_BAD_REQUEST)
         
 
     def delete(self, request, *args, **kwargs):
