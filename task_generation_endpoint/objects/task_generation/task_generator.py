@@ -10,6 +10,7 @@ from trl import SFTTrainer
 import json
 import os
 import re
+import gc
 
 
 class TaskGenerator:
@@ -48,6 +49,9 @@ class TaskGenerator:
             output_text = TaskGenerationModel.tokenizer.batch_decode(outputs)[0].replace("<|begin_of_text|>", "").replace("<|eot_id|>", "")
             response_search = re.search("### Response:\n", output_text)
             response = output_text[response_search.start(): ].replace("### Response:\n", "")
+            
+            gc.collect()
+            torch.cuda.empty_cache()
             return response
             
 task_generator = TaskGenerator()

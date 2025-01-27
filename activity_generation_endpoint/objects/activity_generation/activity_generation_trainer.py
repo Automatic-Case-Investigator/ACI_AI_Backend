@@ -1,4 +1,4 @@
-from task_generation_endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
+from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from ACI_AI_Backend.objects.redis_client import redis_client
 from ACI_AI_Backend.objects.mutex_lock import lock
@@ -18,7 +18,7 @@ import gc
 
 class TaskGenerationTrainer:
     def __init__(self):
-        file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
+        file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         
         self.repo_name = config["repo_name"]
@@ -69,17 +69,17 @@ class TaskGenerationTrainer:
         return self.workspace_dir + zip_name + ".zip"
 
     def load_model_tokenizer_locally(self):
-        TaskGenerationModel.load()
+        ActivityGenerationModel.load()
 
     def load_dataset(self):
         dataset_dict = {"instruction": [], "input": [], "output": []}
 
         for key in redis_client.scan_iter(match=self.dataset_key_prefix):
-            case_data = json.loads(redis_client.get(key))
-            input_data = f'Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}'.replace("\r", "")
+            task_data = json.loads(redis_client.get(key))
+            input_data = f'Title:\n{task_data["title"]}\nDescription:\n{task_data["description"]}'.replace("\r", "")
             output_data = ""
-            for index in range(len(case_data["tasks"])):
-                output_data += f'Task #{index + 1}\nTitle: {case_data["tasks"][index]["title"]}\nDescription: {case_data["tasks"][index]["description"]}\n\n'.replace("\r", "")
+            for index in range(len(task_data["activities"])):
+                output_data += f'{index + 1}. {task_data["activities"][index]["title"]}\n'.replace("\r", "")
 
             dataset_dict["instruction"].append(self.instruction)
             dataset_dict["input"].append(input_data)
@@ -98,8 +98,8 @@ class TaskGenerationTrainer:
     def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
         with lock:
             trainer = SFTTrainer(
-                model=TaskGenerationModel.model,
-                tokenizer=TaskGenerationModel.tokenizer,
+                model=ActivityGenerationModel.model,
+                tokenizer=ActivityGenerationModel.tokenizer,
                 train_dataset=self.dataset,
                 dataset_text_field="text",
                 max_seq_length=self.max_seq_length,
@@ -124,8 +124,8 @@ class TaskGenerationTrainer:
 
             trainer.train()
 
-            TaskGenerationModel.model.save_pretrained(self.local_model_dir)
-            TaskGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
+            ActivityGenerationModel.model.save_pretrained(self.local_model_dir)
+            ActivityGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
             
             del trainer
             gc.collect()

@@ -3,6 +3,7 @@ from django.conf import settings
 import torch
 import json
 import os
+import gc
 
 class ActivityGenerationModel:
     model = None
@@ -49,10 +50,11 @@ class ActivityGenerationModel:
 
     @classmethod
     def unload(self):
-        del ActivityGenerationModel.model
-        del ActivityGenerationModel.tokenizer
-        
-        ActivityGenerationModel.model = None
-        ActivityGenerationModel.tokenizer = None
-        
-        torch.cuda.empty_cache()
+        try:
+            del ActivityGenerationModel.model
+            del ActivityGenerationModel.tokenizer
+            
+            gc.collect()
+            torch.cuda.empty_cache()
+        except:
+            print("Model already unloaded")

@@ -6,9 +6,11 @@ from unsloth import is_bfloat16_supported
 from django.conf import settings
 from datasets import Dataset
 from trl import SFTTrainer
+import torch
 import json
 import os
 import re
+import gc
 
 class ActivityGenerator:
     def __init__(self):
@@ -46,6 +48,9 @@ class ActivityGenerator:
             output_text = ActivityGenerationModel.tokenizer.batch_decode(outputs)[0].replace("<|begin_of_text|>", "").replace("<|eot_id|>", "")
             response_search = re.search("### Response:\n", output_text)
             response = output_text[response_search.start(): ].replace("### Response:\n", "")
+            
+            gc.collect()
+            torch.cuda.empty_cache()
             return response
             
 activity_generator = ActivityGenerator()

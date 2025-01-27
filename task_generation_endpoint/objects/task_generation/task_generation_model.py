@@ -3,6 +3,7 @@ from django.conf import settings
 import torch
 import json
 import os
+import gc
 
 class TaskGenerationModel:
     model = None
@@ -49,10 +50,11 @@ class TaskGenerationModel:
 
     @classmethod
     def unload(self):
-        del TaskGenerationModel.model
-        del TaskGenerationModel.tokenizer
-        
-        TaskGenerationModel.model = None
-        TaskGenerationModel.tokenizer = None
-        
-        torch.cuda.empty_cache()
+        try:
+            del TaskGenerationModel.model
+            del TaskGenerationModel.tokenizer
+            
+            gc.collect()
+            torch.cuda.empty_cache()
+        except:
+            print("Model already unloaded")
