@@ -1,0 +1,11 @@
+{
+    "repo_name": "acezxn/SOC_Activity_Generation_Base",
+    "model_name": "activity_generation",
+    "dataset_key_prefix": "Task:*",
+    "workspace_dir": "./models/activity_generation/",
+    "local_model_dir": "./models/activity_generation/model/",
+    "max_seq_length": 2048,
+    "load_in_4bit": true,
+    "dtype": null,
+    "instruction": "You are a SOC analyst. You received a security investigation task from your SOC team. Please check if the task is indeed an investigation task. If it is not, output \"The task is not an investigation.\". Otherwise break it down to a list of investigation activities. Include SIEM investigation tasks if there are any. Answer in bulletpoints only. Each bulletpoint should represent a single activity. Do not include any description or explanation besides the bulletpoints. Answer in the following format:\n1. activity one\n2. activity two\nHere is the title and description of the task:"
+}

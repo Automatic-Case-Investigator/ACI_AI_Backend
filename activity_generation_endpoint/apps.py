@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class TaskgenerationEndpointConfig(AppConfig):
+class ActivityGenerationEndpointConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'TaskGeneration_Endpoint'
+    name = 'activity_generation_endpoint'

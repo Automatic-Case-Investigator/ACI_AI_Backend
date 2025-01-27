@@ -19,5 +19,6 @@ from .objects.view_objects.test_connection import TestConnection
 
 urlpatterns = [
     path("test_connection/", TestConnection.as_view()),
-    path("task_generation_model/", include("TaskGeneration_Endpoint.urls")),
+    path("task_generation_model/", include("task_generation_endpoint.urls")),
+    path("activity_generation_model/", include("activity_generation_endpoint.urls")),
 ]

@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'TaskGeneration_Endpoint'
+    'task_generation_endpoint'
 ]
 
 MIDDLEWARE = [
@@ -94,7 +94,9 @@ REDIS_DB = 0
 REDIS_KEY_EXPIRY_TIME = os.getenv("REDIS_KEY_EXPIRY_TIME")
 
 # Model configurations
-TASK_GENERATION_CONFIG_PATH = "TaskGeneration_Endpoint/constants/task_generation/config.json"
+TASK_GENERATION_CONFIG_PATH = "task_generation_endpoint/constants/task_generation/config.json"
+ACTIVITY_GENERATION_CONFIG_PATH = "activity_generation_endpoint/constants/activity_generation/config.json"
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

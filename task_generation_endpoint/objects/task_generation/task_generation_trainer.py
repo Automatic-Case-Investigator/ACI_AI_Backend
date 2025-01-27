@@ -1,4 +1,4 @@
-from TaskGeneration_Endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
+from task_generation_endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from ACI_AI_Backend.objects.redis_client import redis_client
 from huggingface_hub import snapshot_download

@@ -1,10 +1,10 @@
-from TaskGeneration_Endpoint.objects.task_generation.task_generation_trainer import TaskGenerationTrainer
-from TaskGeneration_Endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
-from TaskGeneration_Endpoint.objects.task_generation.task_generator import task_generator
+from task_generation_endpoint.objects.task_generation.task_generation_trainer import TaskGenerationTrainer
+from task_generation_endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
+from task_generation_endpoint.objects.task_generation.task_generator import task_generator
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
-from TaskGeneration_Endpoint.models import *
+from task_generation_endpoint.models import *
 from rest_framework.views import APIView
 from rest_framework import status
 from django.conf import settings
