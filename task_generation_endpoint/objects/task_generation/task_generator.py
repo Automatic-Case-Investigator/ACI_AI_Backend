@@ -7,6 +7,7 @@ from unsloth import is_bfloat16_supported
 from django.conf import settings
 from datasets import Dataset
 from trl import SFTTrainer
+import torch
 import json
 import os
 import re
