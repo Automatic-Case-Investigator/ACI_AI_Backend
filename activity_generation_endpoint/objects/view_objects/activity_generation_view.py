@@ -20,10 +20,11 @@ file.close()
             
 class ActivityGenerationView(APIView):
     def post(self, request, *args, **kwargs):
+        case_title = request.POST.get("case_title")
         task_title = request.POST.get("task_title")
         task_description = request.POST.get("task_description")
         if task_title is None or task_description is None:
             return Response({"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST)
         
-        activity_data = activity_generator.generate_activity(title=task_title, description=task_description)
+        activity_data = activity_generator.generate_activity(case_title=case_title, task_title=task_title, description=task_description)
         return Response({"result": activity_data}, status=status.HTTP_200_OK)

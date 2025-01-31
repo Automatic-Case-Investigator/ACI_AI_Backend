@@ -29,12 +29,12 @@ class ActivityGenerator:
         {}"""
         file.close()
     
-    def generate_activity(self, title, description):
+    def generate_activity(self, case_title, task_title, description):
         with lock:
             if ActivityGenerationModel.model is None or ActivityGenerationModel.tokenizer is None:
                 ActivityGenerationModel.load()
 
-            input_string = f"Title:{title}\nDescription:{description}"
+            input_string = f"Case title: {case_title}\nTask title: {task_title}\nDescription: {description}"
             inputs = ActivityGenerationModel.tokenizer(
             [
                 self.prompt_backbone.format(
