@@ -16,7 +16,7 @@ import os
 import gc
 
 
-class TaskGenerationTrainer:
+class ActivityGenerationTrainer:
     def __init__(self):
         file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)

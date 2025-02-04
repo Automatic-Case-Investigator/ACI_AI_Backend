@@ -31,8 +31,13 @@ class TaskGenerator:
         {}"""
         file.close()
     
+    def cleanup(self):
+        gc.collect()
+        torch.cuda.empty_cache()
+            
     def generate_task(self, title, description):
         with lock:
+            self.cleanup()
             if TaskGenerationModel.model is None or TaskGenerationModel.tokenizer is None:
                 TaskGenerationModel.load()
 
@@ -51,8 +56,7 @@ class TaskGenerator:
             response_search = re.search("### Response:\n", output_text)
             response = output_text[response_search.start(): ].replace("### Response:\n", "")
             
-            gc.collect()
-            torch.cuda.empty_cache()
+            self.cleanup()
             return response
             
 task_generator = TaskGenerator()

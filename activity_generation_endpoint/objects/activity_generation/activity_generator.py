@@ -29,8 +29,13 @@ class ActivityGenerator:
         {}"""
         file.close()
     
+    def cleanup(self):
+        gc.collect()
+        torch.cuda.empty_cache()
+    
     def generate_activity(self, case_title, task_title, description):
         with lock:
+            self.cleanup()
             if ActivityGenerationModel.model is None or ActivityGenerationModel.tokenizer is None:
                 ActivityGenerationModel.load()
 
@@ -45,12 +50,11 @@ class ActivityGenerator:
             ], return_tensors = "pt").to("cuda")
             
             outputs = ActivityGenerationModel.model.generate(**inputs, max_new_tokens = 300, use_cache = True)
-            output_text = ActivityGenerationModel.tokenizer.batch_decode(outputs)[0].replace("<|begin_of_text|>", "").replace("<|eot_id|>", "")
+            output_text = ActivityGenerationModel.tokenizer.batch_decode(outputs)[0].replace("<|begin_of_text|>", "").replace("<|end_of_text|>", "")
             response_search = re.search("### Response:\n", output_text)
             response = output_text[response_search.start(): ].replace("### Response:\n", "")
             
-            gc.collect()
-            torch.cuda.empty_cache()
+            self.cleanup()
             return response
             
 activity_generator = ActivityGenerator()

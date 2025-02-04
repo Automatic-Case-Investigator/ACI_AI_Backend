@@ -1,8 +1,10 @@
+from activity_generation_endpoint.objects.activity_generation.activity_generation_trainer import ActivityGenerationTrainer
 from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
 from activity_generation_endpoint.objects.activity_generation.activity_generator import activity_generator
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
+from activity_generation_endpoint.models import *
 from rest_framework.views import APIView
 from rest_framework import status
 from django.conf import settings
@@ -28,3 +30,20 @@ class ActivityGenerationView(APIView):
         
         activity_data = activity_generator.generate_activity(case_title=case_title, task_title=task_title, description=task_description)
         return Response({"result": activity_data}, status=status.HTTP_200_OK)
+
+class RestoreView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            trainer = ActivityGenerationTrainer()
+            trainer.load_baseline()
+            ActivityGenerationModel.load()
+            
+            try:
+                model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
+                model_backup_version_entry.backup_name = ""
+                model_backup_version_entry.save()
+            except ModelBackupVersionEntry.DoesNotExist:
+                pass
+            return Response({"message": "Success"}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
