@@ -123,10 +123,10 @@ class RestoreView(APIView):
             TaskGenerationModel.load()
             
             try:
-                model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
-                model_backup_version_entry.backup_name = ""
-                model_backup_version_entry.save()
-            except ModelBackupVersionEntry.DoesNotExist:
+                current_backup_model, _ = CurrentBackupModelEntry.objects.get_or_create(id=1)
+                current_backup_model.current_model = None
+                current_backup_model.save()
+            except CurrentBackupModelEntry.DoesNotExist:
                 pass
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
@@ -138,11 +138,11 @@ class BackupView(APIView):
             trainer = TaskGenerationTrainer()
             file_name = trainer.backup_model()
             name = os.path.basename(file_name).split('/')[-1].replace(".zip", "")
-            backup_model_entry = BackupModelEntry(model_name=trainer.model_name, name=name, file_name=file_name)
-            model_backup_version_entry = ModelBackupVersionEntry(model_name=trainer.model_name, backup_name=name)
+            backup_model_entry = BackupModelEntry(name=name, file_name=file_name)
+            current_backup_model = CurrentBackupModelEntry(current_model=backup_model_entry)
             backup_model_entry.save()
-            model_backup_version_entry.save()
-            
+            current_backup_model.save()
+        
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -153,13 +153,6 @@ class BackupView(APIView):
             entry = BackupModelEntry.objects.get(name=delete_name)
             subprocess.run(["rm", entry.file_name])         
             entry.delete()
-            
-            try:
-                model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"], backup_name=delete_name)
-                model_backup_version_entry.backup_name = ""
-                model_backup_version_entry.save()
-            except ModelBackupVersionEntry.DoesNotExist:
-                pass
             
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -173,9 +166,9 @@ class RollbackView(APIView):
             subprocess.run(["unzip", "-o", backup.file_name])
        
             backup_name = os.path.basename(backup.file_name).split('/')[-1].replace(".zip", "")
-            model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
-            model_backup_version_entry.backup_name = backup_name
-            model_backup_version_entry.save()  
+            current_backup_model, _ = CurrentBackupModelEntry.objects.get_or_create(id=1)
+            current_backup_model.current_model = backup
+            current_backup_model.save()  
         
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
@@ -206,10 +199,13 @@ class HistoryView(APIView):
 class CurrentBackupVersionView(APIView):
     def get(self, request):
         try:
-            model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
+            current_backup_model, created = CurrentBackupModelEntry.objects.get_or_create(id=1)
             
-            return Response({"message" : "Success", "name": model_backup_version_entry.backup_name}, status=status.HTTP_200_OK)
-        except ModelBackupVersionEntry.DoesNotExist:
+            if created and current_backup_model.current_model is not None:
+                return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message" : "Success", "name": current_backup_model.current_model.name}, status=status.HTTP_200_OK)
+        except CurrentBackupModelEntry.DoesNotExist:
             return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
         except EmptyPage:
             return Response({"message" : "Success", "total_count": BackupModelEntry.objects.count(), "entries": []}, status=status.HTTP_200_OK)

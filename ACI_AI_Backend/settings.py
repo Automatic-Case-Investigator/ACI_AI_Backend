@@ -97,6 +97,7 @@ REDIS_KEY_EXPIRY_TIME = os.getenv("REDIS_KEY_EXPIRY_TIME")
 # Model configurations
 TASK_GENERATION_CONFIG_PATH = "task_generation_endpoint/constants/task_generation/config.json"
 ACTIVITY_GENERATION_CONFIG_PATH = "activity_generation_endpoint/constants/activity_generation/config.json"
+QUERY_GENERATION_CONFIG_PATH = "query_generation_endpoint/constants/query_generation/config.json"
 
 
 # Password validation

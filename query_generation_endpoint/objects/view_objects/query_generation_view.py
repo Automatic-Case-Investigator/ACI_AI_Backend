@@ -1,10 +1,10 @@
-from activity_generation_endpoint.objects.activity_generation.activity_generation_trainer import ActivityGenerationTrainer
-from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
-from activity_generation_endpoint.objects.activity_generation.activity_generator import activity_generator
+from query_generation_endpoint.objects.query_generation.query_generation_trainer import QueryGenerationTrainer
+from query_generation_endpoint.objects.query_generation.query_generation_model import QueryGenerationModel
+from query_generation_endpoint.objects.query_generation.query_generator import query_generator
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
-from activity_generation_endpoint.models import *
+from query_generation_endpoint.models import *
 from rest_framework.views import APIView
 from rest_framework import status
 from django.conf import settings
@@ -20,30 +20,40 @@ file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
 config = json.load(file)
 file.close()
             
-class ActivityGenerationView(APIView):
+class QueryGenerationView(APIView):
     def post(self, request, *args, **kwargs):
         case_title = request.POST.get("case_title")
         case_description = request.POST.get("case_description")
         task_title = request.POST.get("task_title")
         task_description = request.POST.get("task_description")
+        activity = request.POST.get("activity")
+        
         if task_title is None or task_description is None:
             return Response({"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST)
         
-        activity_data = activity_generator.generate_activity(
+        query_data = query_generator.generate_query(
             case_title=case_title,
             case_description=case_description,
             task_title=task_title,
-            description=task_description
+            description=task_description,
+            activity=activity
         )
-        return Response({"result": activity_data}, status=status.HTTP_200_OK)
+        
+        return Response({"result": query_data}, status=status.HTTP_200_OK)
 
 class RestoreView(APIView):
     def post(self, request, *args, **kwargs):
         try:
-            trainer = ActivityGenerationTrainer()
+            trainer = QueryGenerationTrainer()
             trainer.load_baseline()
-            ActivityGenerationModel.load()
+            QueryGenerationModel.load()
             
+            try:
+                model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
+                model_backup_version_entry.backup_name = ""
+                model_backup_version_entry.save()
+            except ModelBackupVersionEntry.DoesNotExist:
+                pass
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
