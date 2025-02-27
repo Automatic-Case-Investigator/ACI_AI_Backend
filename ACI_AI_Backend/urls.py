@@ -21,4 +21,5 @@ urlpatterns = [
     path("test_connection/", TestConnection.as_view()),
     path("task_generation_model/", include("task_generation_endpoint.urls")),
     path("activity_generation_model/", include("activity_generation_endpoint.urls")),
+    path("query_generation_model/", include("query_generation_endpoint.urls")),
 ]

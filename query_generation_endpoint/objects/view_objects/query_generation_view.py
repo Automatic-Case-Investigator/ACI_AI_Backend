@@ -48,12 +48,6 @@ class RestoreView(APIView):
             trainer.load_baseline()
             QueryGenerationModel.load()
             
-            try:
-                model_backup_version_entry = ModelBackupVersionEntry.objects.get(model_name=config["model_name"])
-                model_backup_version_entry.backup_name = ""
-                model_backup_version_entry.save()
-            except ModelBackupVersionEntry.DoesNotExist:
-                pass
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

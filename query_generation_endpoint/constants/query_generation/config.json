@@ -1,9 +1,9 @@
 {
     "repo_name": "acezxn/SOC_Query_Generation_Base",
-    "model_name": "activity_generation",
+    "model_name": "query_generation",
     "dataset_key_prefix": "Task:*",
-    "workspace_dir": "./models/activity_generation/",
-    "local_model_dir": "./models/activity_generation/model/",
+    "workspace_dir": "./models/query_generation/",
+    "local_model_dir": "./models/query_generation/model/",
     "max_seq_length": 3000,
     "load_in_4bit": true,
     "dtype": null,
