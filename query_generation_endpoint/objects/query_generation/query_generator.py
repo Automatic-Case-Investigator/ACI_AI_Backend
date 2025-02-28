@@ -33,11 +33,17 @@ class QueryGenerator:
         gc.collect()
         torch.cuda.empty_cache()
     
-    def generate_query(self, case_title, case_description, task_title, description, activity):
+    def generate_query(self, is_splunk, case_title, case_description, task_title, description, activity):
         with lock:
             self.cleanup()
             if QueryGenerationModel.model is None or QueryGenerationModel.tokenizer is None:
                 QueryGenerationModel.load()
+
+            prompt = ""
+            if is_splunk:
+                return None
+            else:
+                prompt = self.instruction["open_search"]
 
             input_string = f"Case title: {case_title}\nCase description: {case_description}\nTask title: {task_title}\nTask description: {description}\nActivity: {activity}"
             inputs = QueryGenerationModel.tokenizer(

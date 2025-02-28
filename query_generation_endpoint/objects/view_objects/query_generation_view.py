@@ -27,17 +27,23 @@ class QueryGenerationView(APIView):
         task_title = request.POST.get("task_title")
         task_description = request.POST.get("task_description")
         activity = request.POST.get("activity")
+        siem = request.POST.get("siem")
         
         if task_title is None or task_description is None:
             return Response({"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST)
         
+        
         query_data = query_generator.generate_query(
+            is_splunk=siem == "splunk",
             case_title=case_title,
             case_description=case_description,
             task_title=task_title,
             description=task_description,
             activity=activity
         )
+        
+        if query_data is None:
+            return Response({"error": "Specified SIEM platform not implemented"}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({"result": query_data}, status=status.HTTP_200_OK)
 
