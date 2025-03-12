@@ -4,6 +4,7 @@ import torch
 import json
 import os
 import gc
+import traceback
 
 class QueryGenerationModel:
     model = None
@@ -43,10 +44,11 @@ class QueryGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    fix_tokenizer=False
                 )
             FastLanguageModel.for_inference(QueryGenerationModel.model)
         except Exception as e:
-            print(e)
+            print(traceback.format_exc())
 
     @classmethod
     def unload(self):
