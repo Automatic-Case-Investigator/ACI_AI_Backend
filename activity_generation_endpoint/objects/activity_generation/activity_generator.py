@@ -19,14 +19,11 @@ class ActivityGenerator:
 
         self.instruction = config["instruction"]
         self.prompt_backbone = """
-        ### Instruction:
-        {}
-
-        ### Input:
-        {}
-
-        ### Response:
-        {}"""
+<|start_header_id|>system<|end_header_id|>
+{}<|eot_id|><|start_header_id|>user<|end_header_id|>
+{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+{}
+"""
         file.close()
     
     def cleanup(self):
@@ -49,18 +46,21 @@ class ActivityGenerator:
                 )
             ], return_tensors = "pt").to("cuda")
             
-            tags = ["<|begin_of_text|>", "<|end_of_text|>", "<|eot_id|>"]
+            response_tag = r"<\|start_header_id\|>assistant<\|end_header_id\|>"
+            end_tag = r"<\|eot_id\|>|<\|start_header_id\|>system<\|end_header_id\|>|<\|start_header_id\|>user<\|end_header_id\|>"
             
             outputs = ActivityGenerationModel.model.generate(**inputs, max_new_tokens = 300, use_cache = True)
             output_text = ActivityGenerationModel.tokenizer.batch_decode(outputs)[0]
             
-            for tag in tags:
-                output_text = output_text.replace(tag, "")
+            response_search = re.search(response_tag, output_text)
+            response = output_text[response_search.start(): ]
+            response = re.sub(response_tag, "", response)
             
-            response_search = re.search("### Response:\n", output_text)
-            response = output_text[response_search.start(): ].replace("### Response:\n", "")
+            end_tag_search = re.search(end_tag, response)
+            if end_tag_search is not None:
+                response = response[ :end_tag_search.start()]
             
             self.cleanup()
-            return response
+            return response.strip()
             
 activity_generator = ActivityGenerator()

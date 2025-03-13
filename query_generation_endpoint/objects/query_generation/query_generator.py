@@ -67,8 +67,6 @@ class QueryGenerator:
             if end_tag_search is not None:
                 response = response[ :end_tag_search.start()]
             
-            print("Final: ", response.strip())
-
             self.cleanup()
             return response.strip()
             
