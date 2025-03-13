@@ -58,7 +58,7 @@ class QueryGenerator:
             
             outputs = QueryGenerationModel.model.generate(**inputs, max_new_tokens = 300, use_cache = True)
             output_text = QueryGenerationModel.tokenizer.batch_decode(outputs)[0]
-            
+                        
             response_search = re.search(response_tag, output_text)
             response = output_text[response_search.start(): ]
             response = re.sub(response_tag, "", response)
@@ -67,7 +67,7 @@ class QueryGenerator:
             if end_tag_search is not None:
                 response = response[ :end_tag_search.start()]
             
-            print(response.strip())
+            print("Final: ", response.strip())
 
             self.cleanup()
             return response.strip()
