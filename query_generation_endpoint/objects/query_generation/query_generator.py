@@ -56,7 +56,7 @@ class QueryGenerator:
             response_tag = r"<\|start_header_id\|>assistant<\|end_header_id\|>"
             end_tag = r"<\|eot_id\|>|<\|start_header_id\|>system<\|end_header_id\|>|<\|start_header_id\|>user<\|end_header_id\|>"
             
-            outputs = QueryGenerationModel.model.generate(**inputs, max_new_tokens = 300, use_cache = True)
+            outputs = QueryGenerationModel.model.generate(**inputs, max_new_tokens = 600)
             output_text = QueryGenerationModel.tokenizer.batch_decode(outputs)[0]
                         
             response_search = re.search(response_tag, output_text)

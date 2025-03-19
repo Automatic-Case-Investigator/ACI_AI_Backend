@@ -33,6 +33,7 @@ class QueryGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    fix_tokenizer=False
                 )
                 QueryGenerationModel.model.save_pretrained(local_model_dir)
                 QueryGenerationModel.tokenizer.save_pretrained(local_model_dir)

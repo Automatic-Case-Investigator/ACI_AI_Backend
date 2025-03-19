@@ -32,6 +32,7 @@ class ActivityGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    fix_tokenizer=False
                 )
                 ActivityGenerationModel.model.save_pretrained(local_model_dir)
                 ActivityGenerationModel.tokenizer.save_pretrained(local_model_dir)
@@ -43,6 +44,7 @@ class ActivityGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    fix_tokenizer=False
                 )
             FastLanguageModel.for_inference(ActivityGenerationModel.model)
         except Exception as e:
