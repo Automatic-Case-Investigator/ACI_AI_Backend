@@ -33,6 +33,7 @@ class QueryGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    device_map="auto",
                     fix_tokenizer=False
                 )
                 QueryGenerationModel.model.save_pretrained(local_model_dir)
@@ -45,6 +46,7 @@ class QueryGenerationModel:
                     max_seq_length=max_seq_length,
                     dtype = dtype,
                     load_in_4bit = load_in_4bit,
+                    device_map="auto",
                     fix_tokenizer=False
                 )
             FastLanguageModel.for_inference(QueryGenerationModel.model)
