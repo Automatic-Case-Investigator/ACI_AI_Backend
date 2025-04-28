@@ -1,5 +1,5 @@
 {
-    "repo_name": "acezxn/SOC_Activity_Generation_Base",
+    "repo_name": "acezxn/SOC_Activity_Generation_Base_Llama_3B",
     "model_name": "activity_generation",
     "dataset_key_prefix": "Task:*",
     "workspace_dir": "./models/activity_generation/",

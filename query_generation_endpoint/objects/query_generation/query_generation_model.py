@@ -4,7 +4,6 @@ import torch
 import json
 import os
 import gc
-import traceback
 
 class QueryGenerationModel:
     model = None
@@ -23,41 +22,38 @@ class QueryGenerationModel:
         dtype = config["dtype"]
         file.close()
         
-        try:
-            if not os.path.exists(local_model_dir) or not os.path.isdir(local_model_dir):
-
-                # pull the model from remote repository if no model is saved locally
-                os.system(f"mkdir -p {local_model_dir}")
-                QueryGenerationModel.model, QueryGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
-                    repo_name,
-                    max_seq_length=max_seq_length,
-                    dtype = dtype,
-                    load_in_4bit = load_in_4bit,
-                    device_map="auto",
-                    fix_tokenizer=False
-                )
-                QueryGenerationModel.model.save_pretrained(local_model_dir)
-                QueryGenerationModel.tokenizer.save_pretrained(local_model_dir)
-            else:
-                
-                # load the saved model
-                QueryGenerationModel.model, QueryGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
-                    local_model_dir,
-                    max_seq_length=max_seq_length,
-                    dtype = dtype,
-                    load_in_4bit = load_in_4bit,
-                    device_map="auto",
-                    fix_tokenizer=False
-                )
-            FastLanguageModel.for_inference(QueryGenerationModel.model)
-        except Exception as e:
-            print(traceback.format_exc())
-
+        if not os.path.exists(local_model_dir) or not os.path.isdir(local_model_dir):
+            # pull the model from remote repository if no model is saved locally
+            os.system(f"mkdir -p {local_model_dir}")
+            QueryGenerationModel.model, QueryGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
+                repo_name,
+                max_seq_length=max_seq_length,
+                dtype = dtype,
+                load_in_4bit = load_in_4bit,
+                device_map="auto",
+                fix_tokenizer=False
+            )
+            QueryGenerationModel.model.save_pretrained(local_model_dir)
+            QueryGenerationModel.tokenizer.save_pretrained(local_model_dir)
+        else:      
+            # load the saved model
+            QueryGenerationModel.model, QueryGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
+                local_model_dir,
+                max_seq_length=max_seq_length,
+                dtype = dtype,
+                load_in_4bit = load_in_4bit,
+                device_map="auto",
+                fix_tokenizer=False
+            )
+        FastLanguageModel.for_inference(QueryGenerationModel.model)
+            
     @classmethod
     def unload(self):
         try:
             del QueryGenerationModel.model
             del QueryGenerationModel.tokenizer
+            QueryGenerationModel.model = None
+            QueryGenerationModel.tokenizer = None
             
             gc.collect()
             torch.cuda.empty_cache()

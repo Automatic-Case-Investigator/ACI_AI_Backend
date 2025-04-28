@@ -22,41 +22,40 @@ class TaskGenerationModel:
         dtype = config["dtype"]
         file.close()
         
-        try:
-            if not os.path.exists(local_model_dir) or not os.path.isdir(local_model_dir):
+        if not os.path.exists(local_model_dir) or not os.path.isdir(local_model_dir):
 
-                # pull the model from remote repository if no model is saved locally
-                os.system(f"mkdir -p {local_model_dir}")
-                TaskGenerationModel.model, TaskGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
-                    repo_name,
-                    max_seq_length=max_seq_length,
-                    dtype = dtype,
-                    load_in_4bit = load_in_4bit,
-                    device_map="auto",
-                    fix_tokenizer=False
-                )
-                TaskGenerationModel.model.save_pretrained(local_model_dir)
-                TaskGenerationModel.tokenizer.save_pretrained(local_model_dir)
-            else:
-                
-                # load the saved model
-                TaskGenerationModel.model, TaskGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
-                    local_model_dir,
-                    max_seq_length=max_seq_length,
-                    dtype = dtype,
-                    load_in_4bit = load_in_4bit,
-                    device_map="auto",
-                    fix_tokenizer=False
-                )
-            FastLanguageModel.for_inference(TaskGenerationModel.model)
-        except Exception as e:
-            print(e)
+            # pull the model from remote repository if no model is saved locally
+            os.system(f"mkdir -p {local_model_dir}")
+            
+            TaskGenerationModel.model, TaskGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
+                repo_name,
+                max_seq_length=max_seq_length,
+                dtype = dtype,
+                load_in_4bit = load_in_4bit,
+                device_map="auto",
+                fix_tokenizer=False
+            )
+            TaskGenerationModel.model.save_pretrained(local_model_dir)
+            TaskGenerationModel.tokenizer.save_pretrained(local_model_dir)
+        else:       
+            # load the saved model
+            TaskGenerationModel.model, TaskGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
+                local_model_dir,
+                max_seq_length=max_seq_length,
+                dtype = dtype,
+                load_in_4bit = load_in_4bit,
+                device_map="auto",
+                fix_tokenizer=False
+            )
+        FastLanguageModel.for_inference(TaskGenerationModel.model)
 
     @classmethod
     def unload(self):
         try:
             del TaskGenerationModel.model
             del TaskGenerationModel.tokenizer
+            TaskGenerationModel.model = None
+            TaskGenerationModel.tokenizer = None
             
             gc.collect()
             torch.cuda.empty_cache()

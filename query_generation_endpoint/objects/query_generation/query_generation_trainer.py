@@ -54,8 +54,11 @@ class QueryGenerationTrainer:
         }
     
     def load_baseline(self):
-        if not os.path.exists(self.local_model_dir) or not os.path.isdir(self.local_model_dir):
-            os.system(f"mkdir -p {self.local_model_dir}")
+        if os.path.exists(self.local_model_dir) and os.path.isdir(self.local_model_dir):
+            # delete all the old files in the model directory
+            os.system(f"rm -rfd {self.local_model_dir}*")
+
+        os.system(f"mkdir -p {self.local_model_dir}")
 
         snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
 

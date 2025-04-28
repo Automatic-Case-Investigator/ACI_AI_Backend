@@ -1,5 +1,6 @@
 from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
+from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from ACI_AI_Backend.objects.redis_client import redis_client
 from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import snapshot_download
@@ -57,8 +58,11 @@ class ActivityGenerationTrainer:
         }
     
     def load_baseline(self):
-        if not os.path.exists(self.local_model_dir) or not os.path.isdir(self.local_model_dir):
-            os.system(f"mkdir -p {self.local_model_dir}")
+        if os.path.exists(self.local_model_dir) and os.path.isdir(self.local_model_dir):
+            # delete all the old files in the model directory
+            os.system(f"rm -rfd {self.local_model_dir}*")
+
+        os.system(f"mkdir -p {self.local_model_dir}")
 
         snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
 

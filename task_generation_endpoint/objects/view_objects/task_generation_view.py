@@ -1,6 +1,7 @@
 from task_generation_endpoint.objects.task_generation.task_generation_trainer import TaskGenerationTrainer
 from task_generation_endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
 from task_generation_endpoint.objects.task_generation.task_generator import task_generator
+from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
@@ -131,6 +132,8 @@ class RestoreView(APIView):
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except RuntimeError:
+            raise OutOfMemoryError("Ran out of GPU VRAM for query generation. Please make sure that your GPU has enough vram for the model.")
         
 class BackupView(APIView):
     def post(self, request):
@@ -203,8 +206,10 @@ class CurrentBackupVersionView(APIView):
             
             if created and current_backup_model.current_model is not None:
                 return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
-            else:
+            elif current_backup_model.current_model is not None:
                 return Response({"message" : "Success", "name": current_backup_model.current_model.name}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error" : "Failed to create backup entry"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except CurrentBackupModelEntry.DoesNotExist:
             return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
         except EmptyPage:

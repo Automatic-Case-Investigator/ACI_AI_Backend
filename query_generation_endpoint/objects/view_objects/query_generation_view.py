@@ -1,6 +1,7 @@
 from query_generation_endpoint.objects.query_generation.query_generation_trainer import QueryGenerationTrainer
 from query_generation_endpoint.objects.query_generation.query_generation_model import QueryGenerationModel
 from query_generation_endpoint.objects.query_generation.query_generator import query_generator
+from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
@@ -57,3 +58,5 @@ class RestoreView(APIView):
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except RuntimeError:
+            raise OutOfMemoryError("Ran out of GPU VRAM for query generation. Please make sure that your GPU has enough vram for the model.")
