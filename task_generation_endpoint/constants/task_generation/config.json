@@ -1,6 +1,12 @@
 {
-    "repo_name": "acezxn/SOC_Task_Generation_Base_Llama_3B",
-    "model_name": "task_generation",
+    
+    "models": {
+        "task_gen_llama_3b": {
+            "name": "Task Generation Agent",
+            "size": "3B",
+            "repo_name": "acezxn/SOC_Task_Generation_Base_Llama_3B"
+        }
+    },
     "dataset_key_prefix": "Case:*",
     "workspace_dir": "./models/task_generation/",
     "local_model_dir": "./models/task_generation/model/",

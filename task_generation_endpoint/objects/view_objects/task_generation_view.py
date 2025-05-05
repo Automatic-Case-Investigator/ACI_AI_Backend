@@ -20,8 +20,11 @@ import os
 file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
 config = json.load(file)
 file.close()
-            
+
 class TaskGenerationView(APIView):
+    """
+    The view that handles task generation requests
+    """
     def post(self, request, *args, **kwargs):
         case_title = request.POST.get("case_title")
         case_description = request.POST.get("case_description")
@@ -32,6 +35,9 @@ class TaskGenerationView(APIView):
         return Response({"result": task_data}, status=status.HTTP_200_OK)
 
 class CaseTemporaryStorageView(APIView):
+    """
+    The view that handles task generation datasets in redis
+    """
     def post(self, request, *args, **kwargs):
         """Modifies the already stored case data in redis
 
@@ -91,6 +97,9 @@ class CaseTemporaryStorageView(APIView):
         return Response({"message": "Success"}, status=status.HTTP_200_OK)
 
 class TaskGenTrainerView(APIView):
+    """
+    The view that handles requests for fine-tuning task generation model
+    """
     def post(self, request, *args, **kwargs):
         try:
             seed = int(request.POST.get("seed"))
@@ -117,14 +126,27 @@ class TaskGenTrainerView(APIView):
             return Response({"error": "Required fields have invalid format"}, status=status.HTTP_400_BAD_REQUEST)
     
 class RestoreView(APIView):
+    """
+    THe view that accepts requests to download base model
+    """
     def post(self, request, *args, **kwargs):
+        model_id = request.POST.get("model_id")
+        
+        if model_id is None:
+            return Response({"error": "No model specified"}, status=status.HTTP_400_BAD_REQUEST)
+        if model_id not in config["models"].keys():
+            return Response({"error": "The model ID does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             trainer = TaskGenerationTrainer()
-            trainer.load_baseline()
-            TaskGenerationModel.load()
+            trainer.load_baseline(model_id)
+            
+            name = config["models"][model_id]["name"]
             
             try:
                 current_backup_model, _ = CurrentBackupModelEntry.objects.get_or_create(id=1)
+                current_backup_model.model_id = model_id
+                current_backup_model.name = name
                 current_backup_model.current_model = None
                 current_backup_model.save()
             except CurrentBackupModelEntry.DoesNotExist:
@@ -136,13 +158,24 @@ class RestoreView(APIView):
             raise OutOfMemoryError("Ran out of GPU VRAM for query generation. Please make sure that your GPU has enough vram for the model.")
         
 class BackupView(APIView):
+    """
+    The view that manages model backups
+    """
     def post(self, request):
         try:
             trainer = TaskGenerationTrainer()
             file_name = trainer.backup_model()
-            name = os.path.basename(file_name).split('/')[-1].replace(".zip", "")
-            backup_model_entry = BackupModelEntry(name=name, file_name=file_name)
-            current_backup_model = CurrentBackupModelEntry(current_model=backup_model_entry)
+            basename = os.path.basename(file_name).split('/')[-1].replace(".zip", "")
+            current_backup_model, success = CurrentBackupModelEntry.objects.get_or_create(id=1)
+            
+            backup_model_entry = BackupModelEntry(
+                model_id=current_backup_model.model_id,
+                name=current_backup_model.name,
+                basename=basename,
+                file_name=file_name
+            )
+            
+            current_backup_model.current_model = backup_model_entry
             backup_model_entry.save()
             current_backup_model.save()
         
@@ -153,7 +186,7 @@ class BackupView(APIView):
     def delete(self, request):
         try:          
             delete_name = request.data.get("hash")
-            entry = BackupModelEntry.objects.get(name=delete_name)
+            entry = BackupModelEntry.objects.get(basename=delete_name)
             subprocess.run(["rm", entry.file_name])         
             entry.delete()
             
@@ -162,15 +195,20 @@ class BackupView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class RollbackView(APIView):
+    """
+    The view that accepts requests to rollback to a specific model backup
+    """
     def post(self, request):
         try:
             restore_name = request.POST.get("hash")
-            backup = BackupModelEntry.objects.get(name=restore_name)
+            backup = BackupModelEntry.objects.get(basename=restore_name)
             subprocess.run(["unzip", "-o", backup.file_name])
        
             backup_name = os.path.basename(backup.file_name).split('/')[-1].replace(".zip", "")
             current_backup_model, _ = CurrentBackupModelEntry.objects.get_or_create(id=1)
             current_backup_model.current_model = backup
+            current_backup_model.model_id = backup.model_id
+            current_backup_model.name = backup.name
             current_backup_model.save()  
         
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
@@ -178,6 +216,9 @@ class RollbackView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class HistoryView(APIView):
+    """
+    The view that returns the backup history of the model
+    """
     def get(self, request):
         try:
             page_number = int(request.GET.get("page"))
@@ -188,7 +229,7 @@ class HistoryView(APIView):
             
             for backup_entry in page_object.object_list:
                 output["entries"].append({
-                    "name": backup_entry.name,
+                    "basename": backup_entry.basename,
                     "date_created": backup_entry.date_created
                 })
 
@@ -200,18 +241,42 @@ class HistoryView(APIView):
             return Response({"error": "Data not formatted properly"}, status=status.HTTP_400_BAD_REQUEST)
 
 class CurrentBackupVersionView(APIView):
+    """
+    The view that returns the current backup version
+    """
     def get(self, request):
         try:
             current_backup_model, created = CurrentBackupModelEntry.objects.get_or_create(id=1)
             
             if created and current_backup_model.current_model is not None:
-                return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
+                return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
             elif current_backup_model.current_model is not None:
-                return Response({"message" : "Success", "name": current_backup_model.current_model.name}, status=status.HTTP_200_OK)
+                return Response({"message" : "Success", "basename": current_backup_model.current_model.basename}, status=status.HTTP_200_OK)
             else:
                 return Response({"error" : "Failed to create backup entry"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except CurrentBackupModelEntry.DoesNotExist:
-            return Response({"message" : "Success", "name": ""}, status=status.HTTP_200_OK)
+            return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
+        except EmptyPage:
+            return Response({"message" : "Success", "total_count": BackupModelEntry.objects.count(), "entries": []}, status=status.HTTP_200_OK)
+        except:
+            print(traceback.format_exc())
+            return Response({"error": "Data not formatted properly"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+class CurrentModelIdView(APIView):
+    """
+    The view that returns the current model id
+    """
+    def get(self, request):
+        try:
+            current_backup_model, created = CurrentBackupModelEntry.objects.get_or_create(id=1)
+            
+            if created and current_backup_model.current_model is not None:
+                return Response({"message" : "Success", "model_id": ""}, status=status.HTTP_200_OK)
+            
+            return Response({"message" : "Success", "model_id": current_backup_model.model_id}, status=status.HTTP_200_OK)
+        except CurrentBackupModelEntry.DoesNotExist:
+            return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
         except EmptyPage:
             return Response({"message" : "Success", "total_count": BackupModelEntry.objects.count(), "entries": []}, status=status.HTTP_200_OK)
         except:

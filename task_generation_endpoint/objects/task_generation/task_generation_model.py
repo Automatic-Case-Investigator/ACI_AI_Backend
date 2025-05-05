@@ -1,3 +1,4 @@
+from task_generation_endpoint.models import *
 from unsloth import FastLanguageModel
 from django.conf import settings
 import torch
@@ -13,8 +14,9 @@ class TaskGenerationModel:
     def load(self):
         file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
+        current_backup_model = CurrentBackupModelEntry.objects.get(id=1)
         
-        repo_name = config["repo_name"]
+        repo_name = config["models"][current_backup_model.model_id]["repo_name"]
         local_model_dir = config["local_model_dir"]
         instruction = config["instruction"]
         max_seq_length = config["max_seq_length"]
