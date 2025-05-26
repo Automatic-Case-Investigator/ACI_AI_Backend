@@ -248,12 +248,10 @@ class CurrentBackupVersionView(APIView):
         try:
             current_backup_model, created = CurrentBackupModelEntry.objects.get_or_create(id=1)
             
-            if created and current_backup_model.current_model is not None:
-                return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
-            elif current_backup_model.current_model is not None:
+            if not created and current_backup_model.current_model is not None:
                 return Response({"message" : "Success", "basename": current_backup_model.current_model.basename}, status=status.HTTP_200_OK)
             else:
-                return Response({"error" : "Failed to create backup entry"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"message" : "Model does not have any backups"}, status=status.HTTP_200_OK)
         except CurrentBackupModelEntry.DoesNotExist:
             return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
         except EmptyPage:
@@ -271,12 +269,9 @@ class CurrentModelIdView(APIView):
         try:
             current_backup_model, created = CurrentBackupModelEntry.objects.get_or_create(id=1)
             
-            if created and current_backup_model.current_model is not None:
-                return Response({"message" : "Success", "model_id": ""}, status=status.HTTP_200_OK)
-            
             return Response({"message" : "Success", "model_id": current_backup_model.model_id}, status=status.HTTP_200_OK)
         except CurrentBackupModelEntry.DoesNotExist:
-            return Response({"message" : "Success", "basename": ""}, status=status.HTTP_200_OK)
+            return Response({"message" : "Success", "model_id": ""}, status=status.HTTP_200_OK)
         except EmptyPage:
             return Response({"message" : "Success", "total_count": BackupModelEntry.objects.count(), "entries": []}, status=status.HTTP_200_OK)
         except:

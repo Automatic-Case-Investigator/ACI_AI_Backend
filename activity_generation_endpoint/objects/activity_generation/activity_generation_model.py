@@ -14,7 +14,8 @@ class ActivityGenerationModel:
         file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         
-        repo_name = config["repo_name"]
+        # TODO: change the current model id to current_backup_model.model_id when implementing backup functionality
+        repo_name = config["models"]["activity_gen_llama_3b"]["repo_name"]
         local_model_dir = config["local_model_dir"]
         instruction = config["instruction"]
         max_seq_length = config["max_seq_length"]

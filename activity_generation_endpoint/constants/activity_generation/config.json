@@ -1,6 +1,11 @@
 {
-    "repo_name": "acezxn/SOC_Activity_Generation_Base_Llama_3B",
-    "model_name": "activity_generation",
+    "models": {
+        "activity_gen_llama_3b": {
+            "name": "Activity Generation Agent",
+            "size": "3B",
+            "repo_name": "acezxn/SOC_Activity_Generation_Base_Llama_3B"
+        }
+    },
     "dataset_key_prefix": "Task:*",
     "workspace_dir": "./models/activity_generation/",
     "local_model_dir": "./models/activity_generation/model/",

@@ -39,10 +39,16 @@ class ActivityGenerationView(APIView):
 
 class RestoreView(APIView):
     def post(self, request, *args, **kwargs):
+        model_id = request.POST.get("model_id")
+        
+        if model_id is None:
+            return Response({"error": "No model specified"}, status=status.HTTP_400_BAD_REQUEST)
+        if model_id not in config["models"].keys():
+            return Response({"error": "The model ID does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             trainer = ActivityGenerationTrainer()
-            trainer.load_baseline()
-            ActivityGenerationModel.load()
+            trainer.load_baseline(model_id)
             
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:
