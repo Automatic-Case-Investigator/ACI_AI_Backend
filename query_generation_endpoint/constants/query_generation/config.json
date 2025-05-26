@@ -1,6 +1,11 @@
 {
-    "repo_name": "acezxn/SOC_Query_Generation_Base_Llama_3B",
-    "model_name": "query_generation",
+    "models": {
+        "query_gen_llama_3b": {
+            "name": "Query Generation Agent",
+            "size": "3B",
+            "repo_name": "acezxn/SOC_Query_Generation_Base_Llama_3B"
+        }
+    },
     "dataset_key_prefix": "Task:*",
     "workspace_dir": "./models/query_generation/",
     "local_model_dir": "./models/query_generation/model/",

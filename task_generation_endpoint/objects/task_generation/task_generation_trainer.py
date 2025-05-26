@@ -31,14 +31,11 @@ class TaskGenerationTrainer:
         file.close()
         
         self.prompt_backbone = """
-        ### Instruction:
-        {}
-
-        ### Input:
-        {}
-
-        ### Response:
-        {}"""
+<|start_header_id|>system<|end_header_id|>
+{}<|eot_id|><|start_header_id|>user<|end_header_id|>
+{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+{}
+"""
         
         self.dataset = None
     

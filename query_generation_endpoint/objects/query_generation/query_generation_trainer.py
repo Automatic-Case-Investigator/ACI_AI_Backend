@@ -21,8 +21,6 @@ class QueryGenerationTrainer:
         file = open(settings.QUERY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         
-        self.repo_name = config["repo_name"]
-        self.model_name = config["model_name"]
         self.dataset_key_prefix = config["dataset_key_prefix"]
         self.workspace_dir = config["workspace_dir"]
         self.local_model_dir = config["local_model_dir"]
@@ -53,7 +51,12 @@ class QueryGenerationTrainer:
             "text": texts,
         }
     
-    def load_baseline(self):
+    def load_baseline(self, model_id):
+        file = open(settings.QUERY_GENERATION_CONFIG_PATH, "r")
+        config = json.load(file)
+        self.repo_name = config["models"][model_id]["repo_name"]
+        file.close()
+        
         if os.path.exists(self.local_model_dir) and os.path.isdir(self.local_model_dir):
             # delete all the old files in the model directory
             os.system(f"rm -rfd {self.local_model_dir}*")

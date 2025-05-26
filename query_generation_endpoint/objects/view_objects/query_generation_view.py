@@ -17,7 +17,7 @@ import hashlib
 import json
 import os
 
-file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
+file = open(settings.QUERY_GENERATION_CONFIG_PATH, "r")
 config = json.load(file)
 file.close()
             
@@ -50,10 +50,16 @@ class QueryGenerationView(APIView):
 
 class RestoreView(APIView):
     def post(self, request, *args, **kwargs):
+        model_id = request.POST.get("model_id")
+                
+        if model_id is None:
+            return Response({"error": "No model specified"}, status=status.HTTP_400_BAD_REQUEST)
+        if model_id not in config["models"].keys():
+            return Response({"error": "The model ID does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             trainer = QueryGenerationTrainer()
-            trainer.load_baseline()
-            QueryGenerationModel.load()
+            trainer.load_baseline(model_id)
             
             return Response({"message": "Success"}, status=status.HTTP_200_OK)
         except ValueError as e:

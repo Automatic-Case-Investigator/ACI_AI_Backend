@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'task_generation_endpoint',
-    'activity_generation_endpoint'
+    'activity_generation_endpoint',
+    'query_generation_endpoint'
 ]
 
 MIDDLEWARE = [
