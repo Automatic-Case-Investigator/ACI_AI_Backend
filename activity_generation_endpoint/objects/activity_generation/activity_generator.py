@@ -51,7 +51,7 @@ class ActivityGenerator:
                     )
                 ], return_tensors = "pt").to("cuda")
                 
-                outputs = ActivityGenerationModel.model.generate(**inputs, max_new_tokens = 600)
+                outputs = ActivityGenerationModel.model.generate(**inputs, max_new_tokens=600, use_cache=True)
                 output_text = ActivityGenerationModel.tokenizer.batch_decode(outputs)[0]
             except:
                 print(traceback.format_exc())

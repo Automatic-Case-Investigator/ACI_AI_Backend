@@ -1,9 +1,11 @@
 from query_generation_endpoint.objects.query_generation.query_generation_model import QueryGenerationModel
 from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
 from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
+from ACI_AI_Backend.objects.string_text_streamer import StringTextStreamer
 from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import hf_hub_download
 from unsloth import is_bfloat16_supported
+from transformers import TextStreamer
 from django.conf import settings
 from datasets import Dataset
 from trl import SFTTrainer
@@ -18,15 +20,7 @@ class QueryGenerator:
     def __init__(self):
         file = open(settings.QUERY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
-
         self.instruction = config["instruction"]
-        self.prompt_backbone = """
-<|start_header_id|>system<|end_header_id|>
-{}<|eot_id|><|start_header_id|>user<|end_header_id|>
-{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-{}
-"""
-
         file.close()
     
     def cleanup(self):
@@ -39,43 +33,37 @@ class QueryGenerator:
             output_text = ""
             
             try:
+                # Loads the query generation model and tokenizer if not loaded
                 if QueryGenerationModel.model is None or QueryGenerationModel.tokenizer is None:
                     QueryGenerationModel.load()
-                    
-                prompt = ""
+                
+                # Decides which instruction prompt to use depending on SIEM architecture
+                instruction = ""
                 if is_splunk:
                     return None
                 else:
-                    prompt = self.instruction["open_search"]
+                    instruction = self.instruction["open_search"]
 
                 input_string = f"Case title: {case_title}\nCase description: {case_description}\nTask title: {task_title}\nTask description: {description}\nActivity: {activity}"
-                inputs = QueryGenerationModel.tokenizer(
-                [
-                    self.prompt_backbone.format(
-                        prompt,
-                        input_string,
-                        "",
-                    )
-                ], return_tensors = "pt").to("cuda")
+                messages = [
+                    {"role": "user", "content" : f"{instruction}\nYour input is:\n{input_string}"}
+                ]
                 
-                outputs = QueryGenerationModel.model.generate(**inputs, max_new_tokens = 600)
-                output_text = QueryGenerationModel.tokenizer.batch_decode(outputs)[0]         
+                # Formats and tokenizes the input string
+                input_text = QueryGenerationModel.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, padding=True)
+                input_ids = QueryGenerationModel.tokenizer([input_text], return_tensors = "pt").to("cuda")
+
+                # Generates output from tokenized input
+                streamer = StringTextStreamer(QueryGenerationModel.tokenizer, skip_prompt=True)
+                _ = QueryGenerationModel.model.generate(**input_ids, streamer=streamer, max_new_tokens=600, use_cache=True)
+                output_text = streamer.get_output()        
+            
             except:
                 print(traceback.format_exc())
                 raise OutOfMemoryError("Ran out of GPU VRAM for query generation. Please make sure that your GPU has enough vram for the model.")
-                  
-            response_tag = r"<\|start_header_id\|>assistant<\|end_header_id\|>"
-            end_tag = r"<\|eot_id\|>|<\|start_header_id\|>system<\|end_header_id\|>|<\|start_header_id\|>user<\|end_header_id\|>"
-            
-            response_search = re.search(response_tag, output_text)
-            response = output_text[response_search.start(): ]
-            response = re.sub(response_tag, "", response)
-            
-            end_tag_search = re.search(end_tag, response)
-            if end_tag_search is not None:
-                response = response[ :end_tag_search.start()]
+
             
             QueryGenerationModel.unload()
-            return response.strip()
+            return output_text
             
 query_generator = QueryGenerator()

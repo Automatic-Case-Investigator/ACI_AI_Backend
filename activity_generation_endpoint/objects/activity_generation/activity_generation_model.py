@@ -29,8 +29,8 @@ class ActivityGenerationModel:
             ActivityGenerationModel.model, ActivityGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
                 repo_name,
                 max_seq_length=max_seq_length,
-                dtype = dtype,
-                load_in_4bit = load_in_4bit,
+                dtype=dtype,
+                load_in_4bit=load_in_4bit,
                 device_map="auto",
                 fix_tokenizer=False
             )
@@ -41,8 +41,8 @@ class ActivityGenerationModel:
             ActivityGenerationModel.model, ActivityGenerationModel.tokenizer = FastLanguageModel.from_pretrained(
                 local_model_dir,
                 max_seq_length=max_seq_length,
-                dtype = dtype,
-                load_in_4bit = load_in_4bit,
+                dtype=dtype,
+                load_in_4bit=load_in_4bit,
                 device_map="auto",
                 fix_tokenizer=False
             )
