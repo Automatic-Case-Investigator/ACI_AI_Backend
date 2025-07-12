@@ -1,9 +1,8 @@
 from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
-from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
-from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from ACI_AI_Backend.objects.redis_client import redis_client
 from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import snapshot_download
+from transformers import TrainingArguments
 from unsloth import is_bfloat16_supported
 from datasets import Dataset
 from django.conf import settings

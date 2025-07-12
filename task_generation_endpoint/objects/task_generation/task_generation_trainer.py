@@ -1,8 +1,10 @@
-from task_generation_endpoint.objects.task_generation.task_generation_model import TaskGenerationModel
-from transformers import TrainingArguments, AutoTokenizer, AutoModelForCausalLM
+from task_generation_endpoint.objects.task_generation.task_generation_model import (
+    TaskGenerationModel,
+)
 from ACI_AI_Backend.objects.redis_client import redis_client
 from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import snapshot_download
+from transformers import TrainingArguments
 from unsloth import is_bfloat16_supported
 from datasets import Dataset
 from django.conf import settings
@@ -20,7 +22,7 @@ class TaskGenerationTrainer:
     def __init__(self):
         file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
-        
+
         self.dataset_key_prefix = config["dataset_key_prefix"]
         self.workspace_dir = config["workspace_dir"]
         self.local_model_dir = config["local_model_dir"]
@@ -29,16 +31,16 @@ class TaskGenerationTrainer:
         self.load_in_4bit = config["load_in_4bit"]
         self.dtype = config["dtype"]
         file.close()
-        
+
         self.prompt_backbone = """
 <|start_header_id|>system<|end_header_id|>
 {}<|eot_id|><|start_header_id|>user<|end_header_id|>
 {}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 {}
 """
-        
+
         self.dataset = None
-    
+
     def formatting_prompts_func(self, examples):
         instructions = examples["instruction"]
         inputs = examples["input"]
@@ -50,24 +52,24 @@ class TaskGenerationTrainer:
         return {
             "text": texts,
         }
-    
+
     def load_baseline(self, model_id):
         file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         self.repo_name = config["models"][model_id]["repo_name"]
         file.close()
-        
+
         if os.path.exists(self.local_model_dir) and os.path.isdir(self.local_model_dir):
             # delete all the old files in the model directory
             os.system(f"rm -rfd {self.local_model_dir}*")
 
         os.system(f"mkdir -p {self.local_model_dir}")
         snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
-        
+
     def backup_model(self):
         current_timestamp = time.time()
-        zip_name = sha256(str(current_timestamp).encode('utf-8')).hexdigest()
-        shutil.make_archive(self.workspace_dir + zip_name, 'zip', self.local_model_dir)
+        zip_name = sha256(str(current_timestamp).encode("utf-8")).hexdigest()
+        shutil.make_archive(self.workspace_dir + zip_name, "zip", self.local_model_dir)
         return self.workspace_dir + zip_name + ".zip"
 
     def load_model_tokenizer_locally(self):
@@ -78,26 +80,41 @@ class TaskGenerationTrainer:
 
         for key in redis_client.scan_iter(match=self.dataset_key_prefix):
             case_data = json.loads(redis_client.get(key))
-            input_data = f'Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}'.replace("\r", "")
+            input_data = f'Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}'.replace(
+                "\r", ""
+            )
             output_data = ""
             for index in range(len(case_data["tasks"])):
-                output_data += f'Task #{index + 1}\nTitle: {case_data["tasks"][index]["title"]}\nDescription: {case_data["tasks"][index]["description"]}\n\n'.replace("\r", "")
+                output_data += f'Task #{index + 1}\nTitle: {case_data["tasks"][index]["title"]}\nDescription: {case_data["tasks"][index]["description"]}\n\n'.replace(
+                    "\r", ""
+                )
 
             dataset_dict["instruction"].append(self.instruction)
             dataset_dict["input"].append(input_data)
             dataset_dict["output"].append(output_data)
-        
-        if (len(dataset_dict["instruction"]) == 0 or len(dataset_dict["input"]) == 0 or len(dataset_dict["output"]) == 0):
+
+        if (
+            len(dataset_dict["instruction"]) == 0
+            or len(dataset_dict["input"]) == 0
+            or len(dataset_dict["output"]) == 0
+        ):
             raise ValueError("No dataset is loaded")
 
         self.dataset = Dataset.from_dict(dataset_dict)
         self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
-        
+
         # Delete all used dataset
         for key in redis_client.scan_iter(self.dataset_key_prefix):
             redis_client.delete(key)
 
-    def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
+    def train(
+        self,
+        seed=3407,
+        max_steps=200,
+        learning_rate=2e-4,
+        gradient_accumulation_steps=4,
+        weight_decay=0.00001,
+    ):
         with lock:
             trainer = SFTTrainer(
                 model=TaskGenerationModel.model,
@@ -128,7 +145,7 @@ class TaskGenerationTrainer:
 
             TaskGenerationModel.model.save_pretrained(self.local_model_dir)
             TaskGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
-            
+
             del trainer
             gc.collect()
             torch.cuda.empty_cache()
