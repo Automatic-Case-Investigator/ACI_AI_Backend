@@ -6,7 +6,6 @@ from query_generation_endpoint.objects.query_generation.query_generator import (
 )
 from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from ACI_AI_Backend.objects.redis_client import redis_client
-from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
 from query_generation_endpoint.models import *
 from rest_framework.views import APIView

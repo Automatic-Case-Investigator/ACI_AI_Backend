@@ -65,7 +65,12 @@ class QueryGenerationTrainer:
 
         os.system(f"mkdir -p {self.local_model_dir}")
 
-        snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
+        snapshot_download(
+            repo_id=self.repo_name,
+            local_dir=self.local_model_dir,
+            max_workers=16,
+            resume_download=True,
+        )
 
     def backup_model(self):
         current_timestamp = time.time()

@@ -6,10 +6,13 @@ from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import snapshot_download
 from transformers import TrainingArguments
 from unsloth import is_bfloat16_supported
-from datasets import Dataset
+from unsloth import standardize_sharegpt
+from unsloth import apply_chat_template
 from django.conf import settings
-from trl import SFTTrainer
+from unsloth import to_sharegpt
+from datasets import Dataset
 from hashlib import sha256
+from trl import SFTTrainer
 import shutil
 import torch
 import json
@@ -32,26 +35,7 @@ class TaskGenerationTrainer:
         self.dtype = config["dtype"]
         file.close()
 
-        self.prompt_backbone = """
-<|start_header_id|>system<|end_header_id|>
-{}<|eot_id|><|start_header_id|>user<|end_header_id|>
-{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-{}
-"""
-
         self.dataset = None
-
-    def formatting_prompts_func(self, examples):
-        instructions = examples["instruction"]
-        inputs = examples["input"]
-        outputs = examples["output"]
-        texts = []
-        for instruction, input, output in zip(instructions, inputs, outputs):
-            text = self.prompt_backbone.format(instruction, input, output)
-            texts.append(text)
-        return {
-            "text": texts,
-        }
 
     def load_baseline(self, model_id):
         file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
@@ -64,7 +48,12 @@ class TaskGenerationTrainer:
             os.system(f"rm -rfd {self.local_model_dir}*")
 
         os.system(f"mkdir -p {self.local_model_dir}")
-        snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
+        snapshot_download(
+            repo_id=self.repo_name,
+            local_dir=self.local_model_dir,
+            max_workers=16,
+            resume_download=True,
+        )
 
     def backup_model(self):
         current_timestamp = time.time()
@@ -78,6 +67,7 @@ class TaskGenerationTrainer:
     def load_dataset(self):
         dataset_dict = {"instruction": [], "input": [], "output": []}
 
+        # Loads the temporary data entry stored in the redis database
         for key in redis_client.scan_iter(match=self.dataset_key_prefix):
             case_data = json.loads(redis_client.get(key))
             input_data = f'Title:\n{case_data["title"]}\n\nDescription:\n{case_data["description"]}'.replace(
@@ -100,8 +90,25 @@ class TaskGenerationTrainer:
         ):
             raise ValueError("No dataset is loaded")
 
+        # Creates a dataset object from dictionary
         self.dataset = Dataset.from_dict(dataset_dict)
-        self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
+
+        # Standardizes the dataset to sharegpt format
+        self.dataset = standardize_sharegpt(to_sharegpt(
+            self.dataset,
+            merged_prompt="{instruction}[[\nYour input is:\n{input}]]",
+            output_column_name="output",
+            conversation_extension=1,
+        ))
+
+        try:
+            # Applies the model template
+            self.dataset = apply_chat_template(
+                self.dataset,
+                tokenizer=TaskGenerationModel.tokenizer
+            )
+        except:
+            raise RuntimeError("Tokenizer is not initialized")
 
         # Delete all used dataset
         for key in redis_client.scan_iter(self.dataset_key_prefix):
@@ -111,9 +118,9 @@ class TaskGenerationTrainer:
         self,
         seed=3407,
         max_steps=200,
-        learning_rate=2e-4,
+        learning_rate=4e-4,
         gradient_accumulation_steps=4,
-        weight_decay=0.00001,
+        weight_decay=0.001,
     ):
         with lock:
             trainer = SFTTrainer(

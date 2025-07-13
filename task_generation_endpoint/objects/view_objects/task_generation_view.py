@@ -135,8 +135,8 @@ class TaskGenTrainerView(APIView):
             weight_decay = float(request.POST.get("weight_decay"))
 
             trainer = TaskGenerationTrainer()
-            trainer.load_dataset()
             trainer.load_model_tokenizer_locally()
+            trainer.load_dataset()
             trainer.train(
                 seed=seed,
                 max_steps=max_steps,

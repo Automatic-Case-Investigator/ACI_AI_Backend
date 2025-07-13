@@ -1,4 +1,6 @@
-from activity_generation_endpoint.objects.activity_generation.activity_generation_model import ActivityGenerationModel
+from activity_generation_endpoint.objects.activity_generation.activity_generation_model import (
+    ActivityGenerationModel,
+)
 from ACI_AI_Backend.objects.redis_client import redis_client
 from ACI_AI_Backend.objects.mutex_lock import lock
 from huggingface_hub import snapshot_download
@@ -20,7 +22,7 @@ class ActivityGenerationTrainer:
     def __init__(self):
         file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
-        
+
         self.dataset_key_prefix = config["dataset_key_prefix"]
         self.workspace_dir = config["workspace_dir"]
         self.local_model_dir = config["local_model_dir"]
@@ -29,7 +31,7 @@ class ActivityGenerationTrainer:
         self.load_in_4bit = config["load_in_4bit"]
         self.dtype = config["dtype"]
         file.close()
-        
+
         self.prompt_backbone = """
         ### Instruction:
         {}
@@ -39,9 +41,9 @@ class ActivityGenerationTrainer:
 
         ### Response:
         {}"""
-        
+
         self.dataset = None
-    
+
     def formatting_prompts_func(self, examples):
         instructions = examples["instruction"]
         inputs = examples["input"]
@@ -53,24 +55,29 @@ class ActivityGenerationTrainer:
         return {
             "text": texts,
         }
-    
+
     def load_baseline(self, model_id):
         file = open(settings.ACTIVITY_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         self.repo_name = config["models"][model_id]["repo_name"]
         file.close()
-        
+
         if os.path.exists(self.local_model_dir) and os.path.isdir(self.local_model_dir):
             # delete all the old files in the model directory
             os.system(f"rm -rfd {self.local_model_dir}*")
 
         os.system(f"mkdir -p {self.local_model_dir}")
-        snapshot_download(repo_id=self.repo_name, local_dir=self.local_model_dir)
+        snapshot_download(
+            repo_id=self.repo_name,
+            local_dir=self.local_model_dir,
+            max_workers=16,
+            resume_download=True,
+        )
 
     def backup_model(self):
         current_timestamp = time.time()
-        zip_name = sha256(str(current_timestamp).encode('utf-8')).hexdigest()
-        shutil.make_archive(self.workspace_dir + zip_name, 'zip', self.local_model_dir)
+        zip_name = sha256(str(current_timestamp).encode("utf-8")).hexdigest()
+        shutil.make_archive(self.workspace_dir + zip_name, "zip", self.local_model_dir)
         return self.workspace_dir + zip_name + ".zip"
 
     def load_model_tokenizer_locally(self):
@@ -81,26 +88,43 @@ class ActivityGenerationTrainer:
 
         for key in redis_client.scan_iter(match=self.dataset_key_prefix):
             task_data = json.loads(redis_client.get(key))
-            input_data = f'Title:\n{task_data["title"]}\nDescription:\n{task_data["description"]}'.replace("\r", "")
+            input_data = f'Title:\n{task_data["title"]}\nDescription:\n{task_data["description"]}'.replace(
+                "\r", ""
+            )
             output_data = ""
             for index in range(len(task_data["activities"])):
-                output_data += f'{index + 1}. {task_data["activities"][index]["title"]}\n'.replace("\r", "")
+                output_data += (
+                    f'{index + 1}. {task_data["activities"][index]["title"]}\n'.replace(
+                        "\r", ""
+                    )
+                )
 
             dataset_dict["instruction"].append(self.instruction)
             dataset_dict["input"].append(input_data)
             dataset_dict["output"].append(output_data)
-        
-        if (len(dataset_dict["instruction"]) == 0 or len(dataset_dict["input"]) == 0 or len(dataset_dict["output"]) == 0):
+
+        if (
+            len(dataset_dict["instruction"]) == 0
+            or len(dataset_dict["input"]) == 0
+            or len(dataset_dict["output"]) == 0
+        ):
             raise ValueError("No dataset is loaded")
 
         self.dataset = Dataset.from_dict(dataset_dict)
         self.dataset = self.dataset.map(self.formatting_prompts_func, batched=True)
-        
+
         # Delete all used dataset
         for key in redis_client.scan_iter(self.dataset_key_prefix):
             redis_client.delete(key)
 
-    def train(self, seed=3407, max_steps=200, learning_rate=2e-4, gradient_accumulation_steps=4, weight_decay=0.00001):
+    def train(
+        self,
+        seed=3407,
+        max_steps=200,
+        learning_rate=2e-4,
+        gradient_accumulation_steps=4,
+        weight_decay=0.00001,
+    ):
         with lock:
             trainer = SFTTrainer(
                 model=ActivityGenerationModel.model,
@@ -131,7 +155,7 @@ class ActivityGenerationTrainer:
 
             ActivityGenerationModel.model.save_pretrained(self.local_model_dir)
             ActivityGenerationModel.tokenizer.save_pretrained(self.local_model_dir)
-            
+
             del trainer
             gc.collect()
             torch.cuda.empty_cache()
