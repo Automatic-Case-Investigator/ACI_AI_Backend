@@ -8,12 +8,7 @@ Major functionalities include
 - **Query Generation:** Gathers evidences by performing SIEM queries relevant to the subtask if possible, or otherwise gather evidences from the case information itself
 
 ## Supported Platforms
-
-### SOAR
-- [The Hive](https://strangebee.com/)
-
-### SIEM
-- [Wazuh](https://wazuh.com/)
+See supported platforms for the [main backend](https://github.com/Automatic-Case-Investigator/ACI_Backend)
 
 ## Installation
 
