@@ -22,4 +22,5 @@ urlpatterns = [
     path("task_generation_model/", include("task_generation_endpoint.urls")),
     path("activity_generation_model/", include("activity_generation_endpoint.urls")),
     path("query_generation_model/", include("query_generation_endpoint.urls")),
+    path("anomaly_detection_model/", include("anomaly_detection_endpoint.urls")),
 ]
