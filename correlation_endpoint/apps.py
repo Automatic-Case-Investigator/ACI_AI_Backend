@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class AnomalyDetectionEndpointConfig(AppConfig):
+class CorrelationEndpointConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'anomaly_detection_endpoint'
+    name = 'correlation_endpoint'

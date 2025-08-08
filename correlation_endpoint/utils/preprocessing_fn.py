@@ -1,5 +1,6 @@
 import json
 
+
 def sort_nested_dict(d):
     if not isinstance(d, dict):
         return d
@@ -8,6 +9,7 @@ def sort_nested_dict(d):
     for key, value in sorted_items:
         sorted_dict[key] = sort_nested_dict(value)
     return sorted_dict
+
 
 def convert_dict_to_natural_language(d, prefix=""):
     if not isinstance(d, dict):
@@ -22,6 +24,7 @@ def convert_dict_to_natural_language(d, prefix=""):
         words += f"{new_prefix} - {convert_dict_to_natural_language(value, prefix=new_prefix)}\n"
 
     return words
+
 
 def preprocess_wazuh_event(event_str):
     event_dict = json.loads(event_str, strict=False)

@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     "task_generation_endpoint",
     "activity_generation_endpoint",
     "query_generation_endpoint",
-    "anomaly_detection_endpoint"
+    "correlation_endpoint"
 ]
 
 MIDDLEWARE = [
