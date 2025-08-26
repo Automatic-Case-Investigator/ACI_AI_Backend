@@ -62,7 +62,8 @@ class ActivityGenerator:
                     use_cache=True,
                     do_sample=True,
                     temperature=0.3,
-                    top_p=0.9,
+                    top_p=0.5,
+                    repetition_penalty=1.1
                 )
                 output_text = streamer.get_output()
 
