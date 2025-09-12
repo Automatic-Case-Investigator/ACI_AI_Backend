@@ -91,10 +91,15 @@ DATABASES = {
     }
 }
 
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+
 REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_DB = 0
 REDIS_KEY_EXPIRY_TIME = os.getenv("REDIS_KEY_EXPIRY_TIME")
+
+CHROMADB_HOST = os.getenv("CHROMADB_HOST")
+CHROMADB_PORT = os.getenv("CHROMADB_PORT")
 
 # Model configurations
 TASK_GENERATION_CONFIG_PATH = (

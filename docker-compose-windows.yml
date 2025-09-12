@@ -1,6 +1,39 @@
 version: '3.5'
 
 services:
+  ollama:
+    image: ollama/ollama:latest
+    pull_policy: always
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/model_files
+    networks:
+      - aci_backend_backend_net
+    tty: true
+    entrypoint: ["/bin/sh", "/model_files/run_ollama.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all 
+              capabilities: [gpu]
+  chroma:
+    image: chromadb/chroma:latest
+    volumes:
+      - chroma_data:/data
+    networks:
+      - aci_backend_backend_net
+    ports:
+      - "8002:8000"
+    restart: unless-stopped
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_PORT=8000
+      - CHROMA_SERVER_NO_ANALYTICS=true
+
   redis:
     image: redis:latest
     healthcheck:
@@ -30,6 +63,7 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
     depends_on:
+      - chroma
       - redis
 
 networks:
@@ -38,5 +72,6 @@ networks:
     external: true
 
 volumes:
+  chroma_data:
   db_volume:
   model_volume:

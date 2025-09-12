@@ -14,7 +14,9 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements.txt /app
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --upgrade --no-cache-dir --no-deps unsloth unsloth-zoo
+RUN pip install --upgrade --no-cache-dir --no-deps unsloth unsloth-zoo duckduckgo-search
+RUN python -m spacy download en_core_web_sm
+RUN crawl4ai-setup
 COPY . /app
 RUN chmod +x entrypoint.sh
 
