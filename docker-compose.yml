@@ -18,19 +18,6 @@ services:
             - driver: nvidia
               count: all 
               capabilities: [gpu]
-
-  chroma:
-    image: chromadb/chroma:latest
-    volumes:
-      - chroma_data:/data
-    ports:
-      - "8002:8000"
-    restart: unless-stopped
-    environment:
-      - CHROMA_SERVER_HOST=0.0.0.0
-      - CHROMA_SERVER_PORT=8000
-      - IS_PERSISTENT=TRUE  
-      - CHROMA_SERVER_NO_ANALYTICS=true
   
   redis:
     image: redis:latest

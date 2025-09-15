@@ -8,6 +8,7 @@ from task_generation_endpoint.objects.task_generation.task_generator import (
     task_generator,
 )
 from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
+from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 from ACI_AI_Backend.objects.redis_client import redis_client
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework.response import Response
@@ -31,7 +32,6 @@ class TaskGenerationView(APIView):
     """
     The view that handles task generation requests
     """
-
     def post(self, request, *args, **kwargs):
         case_title = request.POST.get("case_title")
         case_description = request.POST.get("case_description")
@@ -40,6 +40,9 @@ class TaskGenerationView(APIView):
                 {"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        searcher = WebSearcher()
+        print(searcher.run(case_description))
+        
         task_data = task_generator.generate_task(
             title=case_title, description=case_description
         )

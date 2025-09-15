@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import requests
 
 class OllamaAgent(ABC):
     def __init__(self, url):

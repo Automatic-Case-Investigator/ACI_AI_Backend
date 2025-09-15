@@ -26,13 +26,7 @@
     ],
     "output_example": [
       "\"CVE-2024-49138\"",
-      "\"svohost.exe\"",
-      "\"b432dcf4a0f0b601b1d79848467137a5e25cab5a0b7b1224be9d3b6540122db9\"",
-      "\"C:\\\\temp\\\\service_installer\\\\svohost.exe\"",
-      "\"172.16.17.207\"",
-      "\"conhost.exe 0xffffffff -ForceV1\"",
-      "\"powershell.exe\"",
-      "\"EC2AMAZ-ILGVOIN\\\\LetsDefend\""
+      "\"svohost.exe\""
     ]
   }
   

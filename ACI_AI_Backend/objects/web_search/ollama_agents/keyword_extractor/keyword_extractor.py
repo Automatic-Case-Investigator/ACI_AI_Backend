@@ -14,7 +14,7 @@ class KeywordExtractor(OllamaAgent):
     def invoke(self, data: str) -> str:
         full_prompt = self._get_prompt() + data
         raw_response = self.call_ollama(full_prompt)
-        return raw_response
+        return self._parse_response(raw_response)
     
     def _get_prompt(self) -> str:
         output = ""

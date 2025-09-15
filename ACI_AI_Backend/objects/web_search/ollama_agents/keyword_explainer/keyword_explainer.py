@@ -47,7 +47,7 @@ class KeywordExplainer(OllamaAgent):
         output += "\n"
 
         output += "Below is the keyword and text you will work with:\n"
-        output += "Keyword: {keyword}\nText: {text}\n"
+        output += "<Keyword>{keyword}</Keyword>\n<Text>{text}</Text>\n"
         return output
 
     def _parse_response(self, response: str) -> str:
