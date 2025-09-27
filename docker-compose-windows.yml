@@ -50,7 +50,6 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
     depends_on:
-      - chroma
       - redis
 
 networks:
@@ -59,6 +58,5 @@ networks:
     external: true
 
 volumes:
-  chroma_data:
   db_volume:
   model_volume:

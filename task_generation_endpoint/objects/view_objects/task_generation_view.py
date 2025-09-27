@@ -35,16 +35,30 @@ class TaskGenerationView(APIView):
     def post(self, request, *args, **kwargs):
         case_title = request.POST.get("case_title")
         case_description = request.POST.get("case_description")
+        web_search_enabled = request.POST.get("web_search")
+
         if case_title is None or case_description is None:
             return Response(
                 {"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST
             )
+        
+        if web_search_enabled is None:
+            web_search_enabled = False
+        elif not web_search_enabled.isdigit():
+            return Response(
+                {"error": 'Parameter "web_search" not formatted properly'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        else:
+            web_search_enabled = bool(int(web_search_enabled))
 
-        searcher = WebSearcher()
-        print(searcher.run(case_description))
+        context = None
+        if web_search_enabled:
+            searcher = WebSearcher()
+            context = searcher.run(case_description)
         
         task_data = task_generator.generate_task(
-            title=case_title, description=case_description
+            title=case_title, description=case_description, context=context
         )
         return Response({"result": task_data}, status=status.HTTP_200_OK)
 

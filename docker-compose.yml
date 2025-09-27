@@ -44,10 +44,8 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
     depends_on:
-      - chroma
       - redis
 
 volumes:
-  chroma_data:
   db_volume:
   model_volume:

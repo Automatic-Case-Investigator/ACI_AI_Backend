@@ -16,13 +16,14 @@ class TaskGenerator:
         file = open(settings.TASK_GENERATION_CONFIG_PATH, "r")
         config = json.load(file)
         self.instruction = config["instruction"]
+        self.web_search_prompt = config["web_search_prompt"]
         file.close()
 
     def cleanup(self):
         gc.collect()
         torch.cuda.empty_cache()
 
-    def generate_task(self, title, description):
+    def generate_task(self, title: str, description: str, context: dict = None) -> str:
         with lock:
             self.cleanup()
             output_text = ""
@@ -36,12 +37,28 @@ class TaskGenerator:
                     TaskGenerationModel.load()
 
                 input_string = f"Title:{title}\n\nDescription:{description}"
-                messages = [
+                messages = []
+
+                if context:
+                    context_str = ""
+                    for keyword, explaination in context.items():
+                        if len(explaination) == 0:
+                            continue
+
+                        context_str += f"{keyword}:\n```\n{explaination}\n```\n\n"
+
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"{self.web_search_prompt}\n{context_str}",
+                        }
+                    )
+                messages.append(
                     {
                         "role": "user",
                         "content": f"{self.instruction}\nYour input is:\n{input_string}",
                     }
-                ]
+                )
 
                 # Formats and tokenizes the input string
                 input_text = TaskGenerationModel.tokenizer.apply_chat_template(
@@ -63,7 +80,7 @@ class TaskGenerator:
                     do_sample=True,
                     temperature=0.5,
                     top_p=0.5,
-                    repetition_penalty=1.1
+                    repetition_penalty=1.1,
                 )
                 output_text = streamer.get_output()
 
