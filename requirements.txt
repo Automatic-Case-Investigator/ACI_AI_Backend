@@ -86,4 +86,3 @@ chromadb
 langchain-community
 spacy
 onnxruntime
-duckpy

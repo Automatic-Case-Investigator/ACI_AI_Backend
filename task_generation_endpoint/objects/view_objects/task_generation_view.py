@@ -116,7 +116,7 @@ class CaseTemporaryStorageView(APIView):
                 redis_client.delete(key)
 
             redis_client.set(
-                id, json.dumps(formatted_data), ex=settings.REDIS_KEY_EXPIRY_TIME
+                id, json.dumps(formatted_data), ex=settings.CASE_CACHE_EXPIRY_TIME
             )
             return Response({"message": "Success", "id": id}, status=status.HTTP_200_OK)
         except (KeyError, JSONDecodeError):

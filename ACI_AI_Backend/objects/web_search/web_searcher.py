@@ -1,21 +1,28 @@
-from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_extractor.keyword_extractor import KeywordExtractor
-from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_explainer.keyword_explainer import KeywordExplainer
+from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_extractor.keyword_extractor import (
+    KeywordExtractor,
+)
+from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_explainer.keyword_explainer import (
+    KeywordExplainer,
+)
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+from ACI_AI_Backend.objects.redis_client import redis_client
 from crawl4ai.models import CrawlResult
 from urllib.parse import urlparse
 from django.conf import settings
-from duckpy import Client
 import asyncio
+import http.client
+import json
 import re
 
 
 class WebSearcher:
-    """A class for searching, crawling, and processing web content into a vector database.
+    """
+    A utility class for extracting keywords from text, performing web searches, 
+    and summarizing contextual explanations. 
 
-    The WebSearcher integrates DuckDuckGo search, web crawling, content filtering,
-    and text embedding into a ChromaDB vector database. It can be used to retrieve,
-    filter, and contextualize information about keywords, CVEs, or MITRE techniques.
+    This class combines keyword extraction, web crawling, and information 
+    summarization to provide meaningful context for given input text.
     """
 
     def __init__(
@@ -28,50 +35,43 @@ class WebSearcher:
             max_search_results (int, optional): Maximum number of URLs retrieved per search term.
                 Defaults to 10.
         """
-        self.web_client = Client()
         self.max_search_results = max_search_results
 
     def get_urls(self, search_term: str) -> list[str]:
-        """Retrieve URLs for a given search term using DuckDuckGo.
+        """Retrieve URLs for a given search term.
 
         Args:
             search_term (str): The term to search for.
 
         Returns:
             list[str]: A list of URLs matching the search term.
-        """         
-        results = self.web_client.search(search_term)[:self.max_search_results]
-        urls = []
+        """
+        connection = http.client.HTTPSConnection("google.serper.dev")
+        payload = json.dumps({"q": search_term})
+        headers = {
+            "X-API-KEY": settings.SERPER_API_KEY,
+            "Content-Type": "application/json",
+        }
         
-        url_pattern = re.compile(
-            r"https?://[^\s/$.?#].[^\s]*", re.IGNORECASE
-        )
+        connection.request("POST", "/search", payload, headers)
+        res = connection.getresponse()
+        results = json.loads(res.read().decode()).get("organic", [])
+        urls = []
 
-        # regex to remove "&rut=..." or "?rut=..." at the end
-        rut_pattern = re.compile(r"([&?])rut=[^&]+(&)?")
+        url_pattern = re.compile(r"https?://[^\s/$.?#].[^\s]*", re.IGNORECASE)
 
         for result in results:
-            raw_url = result.get("url", "")
+            raw_url = result.get("link", "")
             url_search = url_pattern.search(raw_url)
             if not url_search:
                 continue
 
-            cleaned_url = raw_url[url_search.start():url_search.end()]
-
-            cleaned_url = rut_pattern.sub(
-                lambda m: m.group(1) if m.group(2) else "", cleaned_url
-            )
-
-            parsed = urlparse(cleaned_url)
-            if parsed.scheme in {"http", "https"} and parsed.netloc:
-                urls.append(cleaned_url)
+            cleaned_url = raw_url[url_search.start() : url_search.end()]
+            urls.append(cleaned_url)
 
         return urls
 
-
-    async def crawl_webpages(
-        self, urls: list[str]
-    ) -> list[CrawlResult]:
+    async def crawl_webpages(self, urls: list[str]) -> list[CrawlResult]:
         """Crawl a list of web pages asynchronously and filter their content.
 
         Args:
@@ -81,7 +81,7 @@ class WebSearcher:
             list[CrawlResult]: List of CrawlResult objects containing extracted content.
         """
         md_generator = DefaultMarkdownGenerator()
-        
+
         crawler_config = CrawlerRunConfig(
             verbose=True,
             markdown_generator=md_generator,
@@ -93,7 +93,7 @@ class WebSearcher:
             remove_overlay_elements=True,
             page_timeout=20000,
         )
-    
+
         browser_config = BrowserConfig(headless=True, text_mode=True, light_mode=True)
 
         async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -117,7 +117,7 @@ class WebSearcher:
             .replace(".", "_")
         )
         return normalized_url
-                
+
     def extract_keyword(self, text: str) -> set[str]:
         """
         Extract relevant keywords (CVEs, MITRE IDs, compliance, attack names, IPs, etc.) from text.
@@ -131,7 +131,7 @@ class WebSearcher:
         extractor = KeywordExtractor(settings.OLLAMA_URL)
         lines = extractor.invoke(text).split("\n")
         keywords = set()
-        
+
         for line in lines:
             if len(line) > 0 or len(line) <= 50:
                 keywords.add(line)
@@ -150,7 +150,7 @@ class WebSearcher:
         """
         keywords = self.extract_keyword(text)
         explainer = KeywordExplainer(settings.OLLAMA_URL)
-        
+
         keyword_knowledge = {}
 
         async def process_keyword(keyword: str):
@@ -158,24 +158,31 @@ class WebSearcher:
 
             if len(urls) == 0:
                 return ""
-                
+
             crawl_results = await self.crawl_webpages(urls)
             crawl_results_text = ""
             crawl_result_url = []
             for crawl_result in crawl_results:
                 if not crawl_result.markdown:
                     continue
-                
+
                 crawl_results_text += crawl_result.markdown + "\n"
                 crawl_result_url.append(crawl_result.url)
-                        
+
             explanation = explainer.invoke(keyword, crawl_results_text)
             return explanation
 
         for keyword in keywords:
-            context = await process_keyword(keyword)
-            keyword_knowledge[keyword] = context
+            explanation = redis_client.get(keyword)
+            if explanation is not None and len(explanation) > 0:
+                keyword_knowledge[keyword] = explanation
+                continue
 
+            explanation = await process_keyword(keyword)
+            keyword_knowledge[keyword] = explanation
+            redis_client.set(keyword, explanation, ex=settings.SEARCH_CACHE_EXPIRY_TIME)
+
+        print(keyword_knowledge)
         return keyword_knowledge
 
     def run(self, text: str) -> dict[str, str]:
