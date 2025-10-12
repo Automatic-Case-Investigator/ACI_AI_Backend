@@ -20,6 +20,7 @@ file.close()
 
 class QueryGenerationView(APIView):
     def post(self, request, *args, **kwargs):
+        user_prompt = request.POST.get("prompt")
         case_title = request.POST.get("case_title")
         case_description = request.POST.get("case_description")
         task_title = request.POST.get("task_title")
@@ -27,19 +28,29 @@ class QueryGenerationView(APIView):
         activity = request.POST.get("activity")
         siem = request.POST.get("siem")
 
-        if task_title is None or task_description is None:
+        if (task_title is None or task_description is None) and user_prompt is None:
             return Response(
                 {"error": "Required field missing"}, status=status.HTTP_400_BAD_REQUEST
             )
+            
+        query_data = None
+        if user_prompt:
+            # Defaults to generate from prompt if it is provided
+            query_data = query_generator.generate_query_from_prompt(
+                is_splunk=siem == "splunk",
+                user_prompt=user_prompt
+            )
 
-        query_data = query_generator.generate_query(
-            is_splunk=siem == "splunk",
-            case_title=case_title,
-            case_description=case_description,
-            task_title=task_title,
-            description=task_description,
-            activity=activity,
-        )
+        else:
+            # Generate multiple queries from case title, description, task, and activity
+            query_data = query_generator.generate_query_from_case(
+                is_splunk=siem == "splunk",
+                case_title=case_title,
+                case_description=case_description,
+                task_title=task_title,
+                description=task_description,
+                activity=activity,
+            )
 
         if query_data is None:
             return Response(
