@@ -1,3 +1,4 @@
+from ACI_AI_Backend.objects.prompt_injection_detection.prompt_injection_detector import PromptInjectionDetector
 from query_generation_endpoint.objects.query_generation.query_generation_model import (
     QueryGenerationModel,
 )
@@ -13,10 +14,11 @@ import gc
 
 class QueryGenerator:
     def __init__(self):
-        file = open(settings.QUERY_GENERATION_CONFIG_PATH, "r")
-        config = json.load(file)
-        self.instruction = config["instruction"]
-        file.close()
+        self.rejection_message = "Could not provide answer to the given instructions"
+        
+        with open(settings.QUERY_GENERATION_CONFIG_PATH, "r") as file:
+            config = json.load(file)
+            self.instruction = config["instruction"]
 
     def cleanup(self):
         gc.collect()
@@ -28,8 +30,12 @@ class QueryGenerator:
         with lock:
             self.cleanup()
             output_text = ""
-
+                    
             try:
+                injection_detector = PromptInjectionDetector()
+                if not injection_detector.is_safe(user_prompt):
+                    return self.rejection_message
+
                 # Loads the query generation model and tokenizer if not loaded
                 if (
                     QueryGenerationModel.model is None

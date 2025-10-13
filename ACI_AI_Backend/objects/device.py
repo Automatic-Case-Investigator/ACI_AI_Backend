@@ -1,8 +1,6 @@
 import torch
 
-DEVICE = "cpu"
-
-def get_freest_gpu():
+def get_freest_gpu_id():
     if not torch.cuda.is_available():
         return None
 
@@ -20,7 +18,6 @@ def get_freest_gpu():
 
     return best_gpu
 
-def update_current_device():
-    gpu_id = get_freest_gpu()
-    global DEVICE
-    DEVICE = torch.device(f"cuda:{gpu_id}" if gpu_id is not None else "cpu")
+def get_freest_device():
+    gpu_id = get_freest_gpu_id()
+    return torch.device(f"cuda:{gpu_id}" if gpu_id is not None else "cpu")

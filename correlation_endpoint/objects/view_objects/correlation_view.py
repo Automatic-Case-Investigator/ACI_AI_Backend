@@ -1,7 +1,7 @@
 from correlation_endpoint.objects.correlator.wazuh_correlator import WazuhCorrelator
 from ACI_AI_Backend.objects.exceptions.out_of_memory_error import OutOfMemoryError
 from correlation_endpoint.utils.preprocessing_fn import preprocess_wazuh_event
-from ACI_AI_Backend.objects.device import DEVICE, update_current_device
+from ACI_AI_Backend.objects.device import get_freest_device
 from rest_framework.response import Response
 from query_generation_endpoint.models import *
 from rest_framework.views import APIView
@@ -27,8 +27,8 @@ class CorrelationView(APIView):
 
         predict_result = 0
         try:
-            update_current_device()
-            anomaly_detector = siem_classes[siem_type](device=DEVICE)
+            device = get_freest_device()
+            anomaly_detector = siem_classes[siem_type](device=device)
             anomaly_detector.load_pretrained("correlation_endpoint/objects/correlator/trained_model/wazuh_correlator/model.pt")
 
             event_data = siem_event_preprocessing_fn[siem_type](event_data)
