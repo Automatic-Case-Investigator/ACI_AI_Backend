@@ -75,7 +75,7 @@ unsloth
 unsloth_zoo
 urllib3==2.2.3
 Werkzeug==3.0.6
-wheel==0.44.0
+wheel==0.46.2
 wrapt==1.16.0
 xxhash==3.5.0
 yarl==1.17.2
