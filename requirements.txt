@@ -79,7 +79,7 @@ wheel==0.44.0
 wrapt==1.16.0
 xxhash==3.5.0
 yarl==1.17.2
-Crawl4AI==0.7.0
+Crawl4AI==0.8.0
 unstructured
 Markdown
 chromadb
