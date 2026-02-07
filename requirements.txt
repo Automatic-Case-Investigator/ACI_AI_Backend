@@ -73,7 +73,7 @@ typing_extensions==4.12.2
 tzdata==2024.2
 unsloth
 unsloth_zoo
-urllib3==2.2.3
+urllib3==2.6.3
 Werkzeug==3.0.6
 wheel==0.46.2
 wrapt==1.16.0
