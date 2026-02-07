@@ -59,7 +59,7 @@ redis==5.2.0
 regex==2024.9.11
 requests==2.32.3
 safetensors==0.4.5
-sentencepiece==0.2.0
+sentencepiece==0.2.1
 setuptools==75.2.0
 shtab==1.7.1
 six==1.16.0
