@@ -1,24 +1,6 @@
 version: '3.5'
 
-services:
-  ollama:
-    image: ollama/ollama:latest
-    pull_policy: always
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ./ollama:/model_files
-    tty: true
-    entrypoint: ["/bin/sh", "/model_files/run_ollama.sh"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all 
-              capabilities: [gpu]
-  
+services:  
   redis:
     image: redis:latest
     healthcheck:
@@ -27,6 +9,22 @@ services:
       timeout: 3s
       retries: 5
     command: [ "redis-server" ]
+
+  vllm:
+    image: nvcr.io/nvidia/vllm:25.12.post1-py3
+    container_name: vllm_gpt_oss
+    ports:
+      - "9000:8000"
+    volumes:
+      - /opt/hf-cache:/root/.cache/huggingface
+    entrypoint: ["vllm", "serve", "--model", "acezxn/ACI_Cyber_Base_GPT_OSS_20B", "--gpu-memory-utilization", "0.5"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   aci-ai-backend:
     build:
@@ -45,6 +43,7 @@ services:
               capabilities: [ gpu ]
     depends_on:
       - redis
+      - vllm
 
 volumes:
   db_volume:
