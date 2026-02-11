@@ -84,6 +84,8 @@ WSGI_APPLICATION = "ACI_AI_Backend.wsgi.application"
 
 # Web Search
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+KEYWORD_EXTRACTOR_CONFIG_PATH = "./ACI_AI_Backend/objects/web_search/keyword_extractor/config/config.json"
+KEYWORD_EXPLAINER_CONFIG_PATH = "./ACI_AI_Backend/objects/web_search/keyword_explainer/config/config.json"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -94,12 +96,12 @@ DATABASES = {
     }
 }
 
-OLLAMA_URL = os.getenv("OLLAMA_URL")
+DEPLOY_METHOD = os.getenv("DEPLOY_METHOD")
+BASE_URL = os.getenv("BASE_URL")
 
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT")
-REDIS_DB = 0
-CASE_CACHE_EXPIRY_TIME = os.getenv("CASE_CACHE_EXPIRY_TIME")
+CHROMADB_HOST = os.getenv("CHROMADB_HOST")
+CHROMADB_PORT = os.getenv("CHROMADB_PORT")
+
 SEARCH_CACHE_EXPIRY_TIME = os.getenv("SEARCH_CACHE_EXPIRY_TIME")
 
 

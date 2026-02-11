@@ -1,87 +1,54 @@
-from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_extractor.keyword_extractor import (
-    KeywordExtractor,
-)
-from ACI_AI_Backend.objects.web_search.ollama_agents.keyword_explainer.keyword_explainer import (
-    KeywordExplainer,
-)
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
-from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
-from ACI_AI_Backend.objects.redis_client import redis_client
-from crawl4ai.models import CrawlResult
-from urllib.parse import urlparse
-from django.conf import settings
+from datetime import datetime, timezone
 import asyncio
 import http.client
 import json
 import re
+import time
+
+from ACI_AI_Backend.objects.chromadb_client import chromadb_client
+from ACI_AI_Backend.objects.web_search.keyword_explainer.keyword_explainer import KeywordExplainer
+from ACI_AI_Backend.objects.web_search.keyword_extractor.keyword_extractor import KeywordExtractor
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
+from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+from crawl4ai.models import CrawlResult
+from django.conf import settings
 
 
 class WebSearcher:
-    """
-    A utility class for extracting keywords from text, performing web searches, 
-    and summarizing contextual explanations. 
+    description = "Given one or more search queries, perform web searches to find relevant pages, " "extract the most important facts, and return a concise, well-structured summary."
 
-    This class combines keyword extraction, web crawling, and information 
-    summarization to provide meaningful context for given input text.
-    """
-
-    def __init__(
-        self,
-        max_search_results: int = 10,
-    ):
-        """Initialize the WebSearcher with configuration options.
-
-        Args:
-            max_search_results (int, optional): Maximum number of URLs retrieved per search term.
-                Defaults to 10.
+    def __init__(self, max_search_results: int = 10):
+        """
+        distance_threshold: max embedding distance to consider a cached explanation relevant
+        ttl_seconds: expiry time for explanations in Chroma (manual TTL)
         """
         self.max_search_results = max_search_results
+        self.ttl_seconds = int(settings.SEARCH_CACHE_EXPIRY_TIME)
 
     def get_urls(self, search_term: str) -> list[str]:
-        """Retrieve URLs for a given search term.
-
-        Args:
-            search_term (str): The term to search for.
-
-        Returns:
-            list[str]: A list of URLs matching the search term.
-        """
         connection = http.client.HTTPSConnection("google.serper.dev")
         payload = json.dumps({"q": search_term})
         headers = {
             "X-API-KEY": settings.SERPER_API_KEY,
             "Content-Type": "application/json",
         }
-        
         connection.request("POST", "/search", payload, headers)
         res = connection.getresponse()
         results = json.loads(res.read().decode()).get("organic", [])
         urls = []
 
         url_pattern = re.compile(r"https?://[^\s/$.?#].[^\s]*", re.IGNORECASE)
-
         for result in results:
             raw_url = result.get("link", "")
             url_search = url_pattern.search(raw_url)
             if not url_search:
                 continue
-
             cleaned_url = raw_url[url_search.start() : url_search.end()]
             urls.append(cleaned_url)
-
         return urls
 
     async def crawl_webpages(self, urls: list[str]) -> list[CrawlResult]:
-        """Crawl a list of web pages asynchronously and filter their content.
-
-        Args:
-            urls (list[str]): List of URLs to crawl.
-
-        Returns:
-            list[CrawlResult]: List of CrawlResult objects containing extracted content.
-        """
         md_generator = DefaultMarkdownGenerator()
-
         crawler_config = CrawlerRunConfig(
             verbose=True,
             markdown_generator=md_generator,
@@ -93,7 +60,6 @@ class WebSearcher:
             remove_overlay_elements=True,
             page_timeout=20000,
         )
-
         browser_config = BrowserConfig(headless=True, text_mode=True, light_mode=True)
 
         async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -101,97 +67,75 @@ class WebSearcher:
             return results
 
     def normalize_url(self, url: str) -> str:
-        """Normalize a URL string into a filesystem-safe identifier.
-
-        Args:
-            url (str): The original URL.
-
-        Returns:
-            str: A normalized string suitable for use as an ID.
-        """
-        normalized_url = (
-            url.replace("https://", "")
-            .replace("www.", "")
-            .replace("/", "_")
-            .replace("-", "_")
-            .replace(".", "_")
-        )
-        return normalized_url
-
-    def extract_keyword(self, text: str) -> set[str]:
-        """
-        Extract relevant keywords (CVEs, MITRE IDs, compliance, attack names, IPs, etc.) from text.
-
-        Args:
-            text (str): The input text to analyze.
-
-        Returns:
-            set[str]: A set of extracted keywords.
-        """
-        extractor = KeywordExtractor(settings.OLLAMA_URL)
-        lines = extractor.invoke(text).split("\n")
-        keywords = set()
-
-        for line in lines:
-            if len(line) > 0 or len(line) <= 50:
-                keywords.add(line)
-
-        return keywords
+        return url.replace("https://", "").replace("www.", "").replace("/", "_").replace("-", "_").replace(".", "_")
 
     async def research(self, text: str) -> dict[str, str]:
-        """Conduct research on a given text by extracting keywords,
-        crawling related web content, and storing results in the vector database.
+        extractor = KeywordExtractor()
+        explainer = KeywordExplainer()
+        query_knowledge: dict[str, str] = {}
+        lock = asyncio.Lock()
+        collection = chromadb_client.get_or_create_collection("web_search_results")
 
-        Args:
-            text (str): Input text to research.
+        async def search_with_query(query: str):
+            # Try to get cached explanation from Chroma
+            now_ts = time.time()
+            db_query_result = collection.query(
+                query_texts=[query],
+                n_results=10,
+            )
 
-        Returns:
-            dict[str, str]: A dictionary mapping keywords to relevant contextual documents.
-        """
-        keywords = self.extract_keyword(text)
-        explainer = KeywordExplainer(settings.OLLAMA_URL)
+            # Filter out expired documents
+            docs = []
+            dists = []
+            valid_indices = []
+            print(db_query_result)
+            for idx, meta in enumerate(db_query_result["metadatas"][0]):
+                created_at = meta.get("created_at", 0)
+                if now_ts - created_at <= self.ttl_seconds:
+                    valid_indices.append(idx)
+                else:
+                    collection.delete(ids=db_query_result["ids"][0][idx])
 
-        keyword_knowledge = {}
+            if valid_indices:
+                docs = [db_query_result["documents"][0][i] for i in valid_indices]
+                dists = [db_query_result["distances"][0][i] for i in valid_indices]
 
-        async def process_keyword(keyword: str):
-            urls = self.get_urls(keyword)
+                min_dist = min(dists)
+                min_idx = dists.index(min_dist)
 
-            if len(urls) == 0:
+                print(f"Query: {query}, Document: {docs[min_idx]}", min_dist)
+                explanation = docs[min_idx]
+                async with lock:
+                    query_knowledge[query] = explanation
+                return
+
+            # Cache miss: find URLs
+            urls = self.get_urls(query)
+            if not urls:
                 return ""
 
+            # Crawl all URLs concurrently
             crawl_results = await self.crawl_webpages(urls)
-            crawl_results_text = ""
-            crawl_result_url = []
-            for crawl_result in crawl_results:
-                if not crawl_result.markdown:
-                    continue
+            crawl_results_text = "\n".join(result.markdown for result in crawl_results if result.markdown)
 
-                crawl_results_text += crawl_result.markdown + "\n"
-                crawl_result_url.append(crawl_result.url)
+            # Generate explanation
+            loop = asyncio.get_running_loop()
+            explanation = await loop.run_in_executor(None, explainer.invoke, query, crawl_results_text)
 
-            explanation = explainer.invoke(keyword, crawl_results_text)
-            return explanation
+            # Save explanation in Chroma
+            async with lock:
+                query_knowledge[query] = explanation
+                collection.add(documents=[explanation], ids=[f"{query}:{hash(explanation)}"], metadatas=[{"keyword": query, "created_at": now_ts}])
 
-        for keyword in keywords:
-            explanation = redis_client.get(keyword)
-            if explanation is not None and len(explanation) > 0:
-                keyword_knowledge[keyword] = explanation
-                continue
+        # Extract keywords and run queries concurrently
+        queries: list[str] = extractor.invoke(text).split(",")
+        print("Queries: ", queries)
+        await asyncio.gather(*(search_with_query(k) for k in queries))
 
-            explanation = await process_keyword(keyword)
-            keyword_knowledge[keyword] = explanation
-            redis_client.set(keyword, explanation, ex=settings.SEARCH_CACHE_EXPIRY_TIME)
-
-        print(keyword_knowledge)
-        return keyword_knowledge
+        return query_knowledge
 
     def run(self, text: str) -> dict[str, str]:
-        """Run the full research pipeline synchronously.
-
-        Args:
-            text (str): Input text to research.
-
-        Returns:
-            dict[str, str]: A dictionary mapping keywords to relevant contextual documents.
-        """
-        return asyncio.run(self.research(text))
+        print("Running web search")
+        knowledge = asyncio.run(self.research(text))
+        print(knowledge)
+        return knowledge

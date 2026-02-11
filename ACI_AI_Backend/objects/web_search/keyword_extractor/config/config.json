@@ -1,0 +1,4 @@
+{
+    "model_name": "acezxn/ACI_Cyber_Base_GPT_OSS_20B",
+    "instruction": "You will be given a cybersecurity related text. Extract the 5 most relevant web-search queries to make sense of the text. Prioritize extracting time sensitive keywords such as CVEs\n\nFocus on nouns, proper names, and specific concepts.\nRemove filler words and stopwords.\nInclude common search-friendly variants or synonyms when helpful.\nOutput the result as a comma-separated list.\n\nExample output:\nkeyword 1,keyword 2,keyword 3..."
+}

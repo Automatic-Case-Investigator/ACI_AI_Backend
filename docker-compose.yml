@@ -1,20 +1,27 @@
 version: '3.5'
 
 services:  
-  redis:
-    image: redis:latest
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
-      interval: 1s
-      timeout: 3s
-      retries: 5
-    command: [ "redis-server" ]
+  # redis:
+  #   image: redis:latest
+  #   healthcheck:
+  #     test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+  #     interval: 1s
+  #     timeout: 3s
+  #     retries: 5
+  #   command: [ "redis-server" ]
+
+  chromadb:
+    image: chromadb/chroma:1.5.0
+    volumes:
+      - chromadb_volume:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY:-TRUE}
 
   vllm:
     image: nvcr.io/nvidia/vllm:25.12.post1-py3
-    container_name: vllm_gpt_oss
-    ports:
-      - "9000:8000"
+    container_name: vllm
     volumes:
       - /opt/hf-cache:/root/.cache/huggingface
     entrypoint: ["vllm", "serve", "--model", "acezxn/ACI_Cyber_Base_GPT_OSS_20B", "--gpu-memory-utilization", "0.5"]
@@ -42,9 +49,10 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
     depends_on:
-      - redis
+      - chromadb
       - vllm
 
 volumes:
+  chromadb_volume:
   db_volume:
   model_volume:
