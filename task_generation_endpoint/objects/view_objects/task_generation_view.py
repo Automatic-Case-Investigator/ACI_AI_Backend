@@ -2,7 +2,6 @@ from task_generation_endpoint.objects.task_generation.task_generation_agent impo
 from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ACI_AI_Backend.llmtool import Tool
 from rest_framework import status
 
 class TaskGenerationView(APIView):
@@ -30,10 +29,18 @@ class TaskGenerationView(APIView):
             web_search_enabled = bool(int(web_search_enabled))
 
         context = None
+        sources = set()
         if web_search_enabled:
             searcher = WebSearcher()
             context = searcher.run(f"Case Title: {case_title}\n\nCase Description: {case_description}\n")
 
+            # Aggregate sources for each keyword
+            for keyword in context.keys():
+                sources.update(context[keyword]["sources"])
+
         task_data = task_generation_agent.invoke(case_title=case_title, case_description=case_description, web_search_context=context)
-        return Response({"result": task_data}, status=status.HTTP_200_OK)
+        
+        
+
+        return Response({"result": task_data, "sources": list(sources)}, status=status.HTTP_200_OK)
         

@@ -42,11 +42,16 @@ class QueryGenerationView(APIView):
 
 
         query_data = None
+        sources = set()
         if user_prompt:
             context = None
             if web_search_enabled:
                 searcher = WebSearcher()
                 context = searcher.run(user_prompt)
+
+                # Aggregate sources for each keyword
+                for keyword in context.keys():
+                    sources.update(context[keyword]["sources"])
 
             # Defaults to generate from prompt if it is provided
             query_data = query_generation_agent.invoke(
@@ -60,7 +65,10 @@ class QueryGenerationView(APIView):
             if web_search_enabled:
                 searcher = WebSearcher()
                 context = searcher.run(f"Case Title: {case_title}\n\nCase Description: {case_description}\n\nTask Title: {task_title}\n\nTask Description: {task_description}\n")
-
+                
+                # Aggregate sources for each keyword
+                for keyword in context.keys():
+                    sources.update(context[keyword]["sources"])
 
             # Generate multiple queries from case title, description, task, and activity
             query_data = query_generation_agent.invoke(
@@ -73,10 +81,11 @@ class QueryGenerationView(APIView):
                 web_search_context=context
             )
 
+
         if query_data is None:
             return Response(
                 {"error": "Specified SIEM platform not implemented"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response({"result": query_data}, status=status.HTTP_200_OK)
+        return Response({"result": query_data, "sources": list(sources)}, status=status.HTTP_200_OK)

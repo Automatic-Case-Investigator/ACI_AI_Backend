@@ -22,7 +22,8 @@ class ActivityGenerationAgent(LLM):
 
         if web_search_context:
             web_search_context_str = ""
-            for keyword, explaination in web_search_context.items():
+            for keyword in web_search_context.keys():
+                explaination = web_search_context[keyword]["explanation"]
                 if len(explaination) == 0:
                     continue
 

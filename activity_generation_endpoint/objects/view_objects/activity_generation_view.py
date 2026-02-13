@@ -2,7 +2,6 @@ from activity_generation_endpoint.objects.activity_generation.activity_generatio
 from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ACI_AI_Backend.llmtool import Tool
 from rest_framework import status
 
 class ActivityGenerationView(APIView):
@@ -37,10 +36,16 @@ class ActivityGenerationView(APIView):
             web_search_enabled = bool(int(web_search_enabled))
 
         context = None
+        sources = set()
         if web_search_enabled:
             searcher = WebSearcher()
             context = searcher.run(f"Case Title: {case_title}\n\nCase Description: {case_description}\n\nTask Title: {task_title}\n\nTask Description: {task_description}\n")
 
+            # Aggregate sources for each keyword
+            for keyword in context.keys():
+                sources.update(context[keyword]["sources"])
+
+
         activity_data = activity_generation_agent.invoke(case_title=case_title, case_description=case_description, task_title=task_title, task_description=task_description, web_search_context=context)
-        return Response({"result": activity_data}, status=status.HTTP_200_OK)
+        return Response({"result": activity_data, "sources": list(sources)}, status=status.HTTP_200_OK)
         

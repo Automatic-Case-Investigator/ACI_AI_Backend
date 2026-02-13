@@ -69,10 +69,10 @@ class WebSearcher:
     def normalize_url(self, url: str) -> str:
         return url.replace("https://", "").replace("www.", "").replace("/", "_").replace("-", "_").replace(".", "_")
 
-    async def research(self, text: str) -> dict[str, str]:
+    async def research(self, text: str) -> dict[str, dict[str, str]]:
         extractor = KeywordExtractor()
         explainer = KeywordExplainer()
-        query_knowledge: dict[str, str] = {}
+        query_knowledge: dict[str, dict[str, str]] = {}
         lock = asyncio.Lock()
         collection = chromadb_client.get_or_create_collection("web_search_results")
 
@@ -106,26 +106,32 @@ class WebSearcher:
                 print(f"Query: {query}, Document: {docs[min_idx]}", min_dist)
                 explanation = docs[min_idx]
                 async with lock:
-                    query_knowledge[query] = explanation
+                    query_knowledge[query] = {
+                        "explanation": explanation,
+                        "sources": db_query_result["metadatas"][0][valid_indices[min_idx]].get("sources", []),
+                    }
                 return
 
             # Cache miss: find URLs
-            urls = self.get_urls(query)
+            urls: list[str] = self.get_urls(query)
             if not urls:
                 return ""
 
             # Crawl all URLs concurrently
-            crawl_results = await self.crawl_webpages(urls)
-            crawl_results_text = "\n".join(result.markdown for result in crawl_results if result.markdown)
+            crawl_results: list[CrawlResult] = await self.crawl_webpages(urls)
+            crawl_results_text: str = "\n".join(result.markdown for result in crawl_results if result.markdown)
 
             # Generate explanation
             loop = asyncio.get_running_loop()
-            explanation = await loop.run_in_executor(None, explainer.invoke, query, crawl_results_text)
+            explanation: str = await loop.run_in_executor(None, explainer.invoke, query, crawl_results_text)
 
             # Save explanation in Chroma
             async with lock:
-                query_knowledge[query] = explanation
-                collection.add(documents=[explanation], ids=[f"{query}:{hash(explanation)}"], metadatas=[{"keyword": query, "created_at": now_ts}])
+                query_knowledge[query] = {
+                    "explanation": explanation,
+                    "sources": urls,
+                }
+                collection.add(documents=[explanation], ids=[f"{query}:{hash(explanation)}"], metadatas=[{"keyword": query, "created_at": now_ts, "sources": urls}])
 
         # Extract keywords and run queries concurrently
         queries: list[str] = extractor.invoke(text).split(",")
@@ -134,7 +140,7 @@ class WebSearcher:
 
         return query_knowledge
 
-    def run(self, text: str) -> dict[str, str]:
+    def run(self, text: str) -> dict[str, dict[str, str]]:
         print("Running web search")
         knowledge = asyncio.run(self.research(text))
         print(knowledge)

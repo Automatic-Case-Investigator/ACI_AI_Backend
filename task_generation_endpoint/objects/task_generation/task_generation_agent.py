@@ -11,7 +11,7 @@ class TaskGenerationAgent(LLM):
         self.prompt = config["instruction"]
         super().__init__(deploy_method=deploy_method, model_name=config["model_name"], base_url=base_url)
 
-    def invoke(self, case_title: str, case_description: str, web_search_context: dict = None) -> str:
+    def invoke(self, case_title: str, case_description: str, web_search_context: dict | None = None) -> str:
         messages = [
             ("system", self.prompt),
             ("human", f"Case title: {case_title}"),
@@ -20,7 +20,8 @@ class TaskGenerationAgent(LLM):
 
         if web_search_context:
             web_search_context_str = ""
-            for keyword, explaination in web_search_context.items():
+            for keyword in web_search_context.keys():
+                explaination = web_search_context[keyword]["explanation"]
                 if len(explaination) == 0:
                     continue
 
