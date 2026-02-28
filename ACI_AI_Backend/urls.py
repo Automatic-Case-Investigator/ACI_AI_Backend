@@ -22,5 +22,8 @@ urlpatterns = [
     path("task_generation_model/", include("task_generation_endpoint.urls")),
     path("activity_generation_model/", include("activity_generation_endpoint.urls")),
     path("query_generation_model/", include("query_generation_endpoint.urls")),
+    path("relevency_filter_model/", include("relevency_filter_endpoint.urls")),
+    path("summary_model/", include("summary_endpoint.urls")),
+    path("completion_check_model/", include("completion_check_endpoint.urls")),
     path("correlation_model/", include("correlation_endpoint.urls")),
 ]

@@ -50,7 +50,10 @@ INSTALLED_APPS = [
     "task_generation_endpoint",
     "activity_generation_endpoint",
     "query_generation_endpoint",
-    "correlation_endpoint"
+    "correlation_endpoint",
+    "relevency_filter_endpoint",
+    "summary_endpoint",
+    "completion_check_endpoint",
 ]
 
 MIDDLEWARE = [
@@ -106,15 +109,12 @@ SEARCH_CACHE_EXPIRY_TIME = os.getenv("SEARCH_CACHE_EXPIRY_TIME")
 
 
 # Model configurations
-TASK_GENERATION_CONFIG_PATH = (
-    "task_generation_endpoint/constants/task_generation/config.json"
-)
-ACTIVITY_GENERATION_CONFIG_PATH = (
-    "activity_generation_endpoint/constants/activity_generation/config.json"
-)
-QUERY_GENERATION_CONFIG_PATH = (
-    "query_generation_endpoint/constants/query_generation/config.json"
-)
+TASK_GENERATION_CONFIG_PATH = "task_generation_endpoint/constants/task_generation/config.json"
+ACTIVITY_GENERATION_CONFIG_PATH = "activity_generation_endpoint/constants/activity_generation/config.json"
+QUERY_GENERATION_CONFIG_PATH = "query_generation_endpoint/constants/query_generation/config.json"
+RELEVENCY_FILTER_CONFIG_PATH = "relevency_filter_endpoint/constants/relevency_filter/config.json"
+SUMMARY_CONFIG_PATH = "summary_endpoint/constants/summary/config.json"
+COMPLETION_CHECK_CONFIG_PATH = "completion_check_endpoint/constants/completion_check/config.json"
 
 
 # Password validation

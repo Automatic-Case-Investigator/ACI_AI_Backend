@@ -15,17 +15,46 @@ from django.conf import settings
 
 
 class WebSearcher:
+    """Search the web, crawl result pages, and build query explanations with caching.
+
+    Workflow:
+    1. Extract one or more focused queries from input text.
+    2. For each query, try to reuse a non-expired cached explanation from ChromaDB.
+    3. On cache miss, fetch result URLs from Serper, crawl pages, and summarize.
+    4. Store fresh explanations back into ChromaDB with creation metadata.
+    """
+
     description = "Given one or more search queries, perform web searches to find relevant pages, " "extract the most important facts, and return a concise, well-structured summary."
 
     def __init__(self, max_search_results: int = 10):
-        """
-        distance_threshold: max embedding distance to consider a cached explanation relevant
-        ttl_seconds: expiry time for explanations in Chroma (manual TTL)
+        """Initialize search settings.
+
+        Args:
+            max_search_results: Maximum number of search results to process per query.
+                (Stored for configuration/use by callers and future tuning.)
         """
         self.max_search_results = max_search_results
         self.ttl_seconds = int(settings.SEARCH_CACHE_EXPIRY_TIME)
 
+    @classmethod
+    def context_to_str(web_search_context: dict):
+        parts = []
+        for keyword, data in web_search_context.items():
+            explanation = data.get("explanation", "")
+            if explanation:
+                parts.append(f"{keyword}:\n```\n{explanation}\n```\n\n")
+            
+        return "".join(parts)
+
     def get_urls(self, search_term: str) -> list[str]:
+        """Fetch organic search result URLs for a query using the Serper API.
+
+        Args:
+            search_term: Query text to send to Serper.
+
+        Returns:
+            A list of cleaned HTTP(S) URLs extracted from organic results.
+        """
         connection = http.client.HTTPSConnection("google.serper.dev")
         payload = json.dumps({"q": search_term})
         headers = {
@@ -48,7 +77,23 @@ class WebSearcher:
         return urls
 
     async def crawl_webpages(self, urls: list[str]) -> list[CrawlResult]:
-        md_generator = DefaultMarkdownGenerator()
+        """Crawl a list of URLs and return text-focused markdown results.
+
+        The crawler is configured to reduce noise by excluding common layout/content
+        elements and returning text-only markdown.
+
+        Args:
+            urls: Target pages to crawl.
+
+        Returns:
+            A list of `CrawlResult` items from crawl4ai.
+        """
+        md_generator = DefaultMarkdownGenerator(
+            options={
+                "ignore_links": True,
+                "ignore_images": True,
+            }
+        )
         crawler_config = CrawlerRunConfig(
             verbose=True,
             markdown_generator=md_generator,
@@ -67,9 +112,23 @@ class WebSearcher:
             return results
 
     def normalize_url(self, url: str) -> str:
+        """Normalize a URL into a filesystem/cache-safe identifier string."""
         return url.replace("https://", "").replace("www.", "").replace("/", "_").replace("-", "_").replace(".", "_")
 
     async def research(self, text: str) -> dict[str, dict[str, str]]:
+        """Generate per-query explanations for an input prompt.
+
+        This method extracts keyword queries from the input text, processes each query
+        concurrently, and returns a dictionary keyed by query containing:
+        - explanation: synthesized explanation text
+        - sources: URLs used for that explanation (cached or newly crawled)
+
+        Args:
+            text: Input prompt/topic to research.
+
+        Returns:
+            A mapping from query to explanation/source metadata.
+        """
         extractor = KeywordExtractor()
         explainer = KeywordExplainer()
         query_knowledge: dict[str, dict[str, str]] = {}
@@ -77,6 +136,7 @@ class WebSearcher:
         collection = chromadb_client.get_or_create_collection("web_search_results")
 
         async def search_with_query(query: str):
+            """Resolve one query using cache-first lookup, then crawl+explain fallback."""
             # Try to get cached explanation from Chroma
             now_ts = time.time()
             db_query_result = collection.query(
@@ -141,6 +201,7 @@ class WebSearcher:
         return query_knowledge
 
     def run(self, text: str) -> dict[str, dict[str, str]]:
+        """Synchronous entrypoint that runs `research` in its own event loop."""
         print("Running web search")
         knowledge = asyncio.run(self.research(text))
         print(knowledge)
