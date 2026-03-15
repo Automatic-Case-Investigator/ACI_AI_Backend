@@ -44,19 +44,6 @@ class QuerySummaryView(APIView):
         return Response({"result": summary}, status=status.HTTP_200_OK)
 
 
-def _split_multiline_or_comma(s: str) -> List[str]:
-    """Split a string by newlines and commas into cleaned non-empty entries."""
-    if not s:
-        return []
-    parts: List[str] = []
-    for line in s.splitlines():
-        for seg in line.split(","):
-            item = seg.strip()
-            if item:
-                parts.append(item)
-    return parts
-
-
 class ActivitySummaryView(APIView):
     def post(self, request, *args, **kwargs):
         payload = request.data or {}
@@ -93,11 +80,8 @@ class ActivitySummaryView(APIView):
         task_title = payload.get("task_title").strip()
         task_description = payload.get("task_description").strip()
         activity = payload.get("activity").strip()
-        queries_raw = payload.get("queries")
-        summaries_raw = payload.get("query_summaries")
-
-        queries_list = _split_multiline_or_comma(queries_raw)
-        summaries_list = _split_multiline_or_comma(summaries_raw)
+        queries = payload.getlist("queries")
+        summaries = payload.getlist("query_summaries")
 
         activity_summary = summary_agent.summarize_activity(
             case_title=case_title,
@@ -105,8 +89,8 @@ class ActivitySummaryView(APIView):
             task_title=task_title,
             task_description=task_description,
             activity=activity,
-            queries=queries_list,
-            query_summaries=summaries_list,
+            queries=queries,
+            query_summaries=summaries,
         )
 
         return Response({"result": activity_summary}, status=status.HTTP_200_OK)

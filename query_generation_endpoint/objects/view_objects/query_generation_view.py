@@ -34,6 +34,7 @@ class QueryGenerationView(APIView):
         "task_title",
         "task_description",
         "activity",
+        "fields",
     ]
 
     def post(self, request, *args, **kwargs):
@@ -74,6 +75,8 @@ class QueryGenerationView(APIView):
         task_title = data.get("task_title")
         task_description = data.get("task_description")
         activity = data.get("activity")
+        fields = data.get("fields")
+        prev_activity_critique = data.get("prev_activity_critique", None)
         web_search_enabled = data.get("web_search", False)
 
         # -------------------------------------------------
@@ -90,6 +93,14 @@ class QueryGenerationView(APIView):
                     {"error": 'Parameter "web_search" is incorrectly formatted'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        if prev_activity_critique is not None:
+            if not isinstance(prev_activity_critique, str):
+                return Response(
+                    {"error": 'Parameter "prev_activity_critique" must be a string'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
 
         # -------------------------------------------------
         # Build optional web‑search context
@@ -122,19 +133,21 @@ class QueryGenerationView(APIView):
         # -------------------------------------------------
         try:
             if user_prompt:
-                query_data = query_generation_agent.invoke(
+                query_data = query_generation_agent.generate(
                     siem=siem,
                     user_prompt=user_prompt,
                     web_search_context=context,
                 )
             else:
-                query_data = query_generation_agent.invoke(
+                query_data = query_generation_agent.generate(
                     siem=siem,
                     case_title=case_title,
                     case_description=case_description,
                     task_title=task_title,
                     task_description=task_description,
                     activity=activity,
+                    fields=fields,
+                    prev_activity_critique=prev_activity_critique,
                     web_search_context=context,
                 )
         except ValueError as e:

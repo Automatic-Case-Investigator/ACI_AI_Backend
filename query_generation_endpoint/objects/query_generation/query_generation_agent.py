@@ -5,9 +5,7 @@ import json
 from ACI_AI_Backend.objects.prompt_injection_detection.prompt_injection_detector import PromptInjectionDetector
 from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 
-# Load configuration once at import time
 _CONFIG = json.load(open(settings.QUERY_GENERATION_CONFIG_PATH, "r"))
-
 
 class QueryGenerationAgent(LLM):
     """
@@ -39,7 +37,44 @@ class QueryGenerationAgent(LLM):
         self.rejection_message = "Could not provide answer to the given instructions"
         super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url)
 
-    def invoke(
+    def fix_queries(
+        self,
+        siem: str = "wazuh",
+        input_str: str = "The user did not provide any inputs"
+    ):
+        """
+        Returns the syntacticly corrected of generated query. Returns "NOT QUERY"
+        if input_str does not contain queries
+
+        Parameters
+        ----------
+        siem : str
+            The name of the SIEM system (currently only 'wazuh' is supported)
+        input_str : str
+            The text input to correct query syntax for
+
+        Returns
+        -------
+        str
+            The LLM response of the corrected syntax
+
+        """
+        messages = []
+
+        if siem == "splunk":
+            pass
+        else:
+            print(f"Fixing queries: {input_str}")
+            prompt = _CONFIG["instruction"]["open_search"]["fix_query"]
+            messages = [
+                ("system", prompt),
+                ("human", f"Input: {input_str}"),
+            ]
+
+        return super().invoke(messages)
+
+
+    def generate(
         self,
         siem: str = "wazuh",
         user_prompt: str | None = None,
@@ -48,6 +83,8 @@ class QueryGenerationAgent(LLM):
         task_title: str | None = None,
         task_description: str | None = None,
         activity: str | None = None,
+        fields: str | None = None,
+        prev_activity_critique: str | None = None,
         web_search_context: dict | None = None,
     ):
         """
@@ -69,6 +106,10 @@ class QueryGenerationAgent(LLM):
             Description of the task.
         activity : str | None
             Activity context for the query.
+        fields : str | None
+            String containing all the fields and their respective type in the SIEM
+        prev_activity_critique : str | None
+            Critique of the previous activity investigation
         web_search_context : dict | None
             Optional web search results to provide additional context.
 
@@ -99,6 +140,14 @@ class QueryGenerationAgent(LLM):
                     ("human", f"Task description: {task_description}"),
                     ("human", f"Activity: {activity}"),
                 ]
+
+                if fields is not None:
+                    print(f"Using field info:\n{fields}")
+                    messages.append(("human", f"Available fields in SIEM:\n{fields}"))
+
+                if prev_activity_critique is not None:
+                    print(f"Using critique: {prev_activity_critique}")
+                    messages.append(("human", f"Critique from previous investigation: {prev_activity_critique}"))
             else:
                 raise ValueError("Invalid arguments for invoke()")
 
