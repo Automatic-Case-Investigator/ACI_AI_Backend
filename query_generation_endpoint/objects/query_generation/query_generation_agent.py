@@ -85,6 +85,10 @@ class QueryGenerationAgent(LLM):
         activity: str | None = None,
         fields: str | None = None,
         prev_activity_critique: str | None = None,
+        earliest_unit: str | None = None,
+        earliest_magnitude: int | None = None,
+        vicinity_unit: str | None = None,
+        vicinity_magnitude: int | None = None,
         web_search_context: dict | None = None,
     ):
         """
@@ -110,6 +114,14 @@ class QueryGenerationAgent(LLM):
             String containing all the fields and their respective type in the SIEM
         prev_activity_critique : str | None
             Critique of the previous activity investigation
+        earliest_unit : str | None
+            Unit of time for the earliest time from now to find events
+        earliest_magnitude : int | None
+            Magnitude of time for the earliest time from now to find events
+        vicinity_unit : str | None
+            Unit of time for the time window of "close together" events
+        vicinity_magnitude: int | None
+            Magnitude of time for the time window of "close together" events
         web_search_context : dict | None
             Optional web search results to provide additional context.
 
@@ -134,12 +146,29 @@ class QueryGenerationAgent(LLM):
                 prompt = _CONFIG["instruction"]["open_search"]["from_case"]
                 messages = [
                     ("system", prompt),
-                    ("human", f"Case title: {case_title}"),
-                    ("human", f"Case description: {case_description}"),
-                    ("human", f"Task title: {task_title}"),
-                    ("human", f"Task description: {task_description}"),
-                    ("human", f"Activity: {activity}"),
                 ]
+
+                if earliest_unit is not None and earliest_magnitude is not None:
+                    messages.append(
+                        ("system",
+                        f"Constraint: When you are asked to identify recent events, Only include events from the past {earliest_magnitude} {earliest_unit}. Exclude anything outside this range.")
+                    )
+
+                if vicinity_unit is not None and vicinity_magnitude is not None:
+                    messages.append(
+                        ("system",
+                        f"Constraint: When you are not asked to identify recent events, but instead asked to find events near a timestamp, use a ±{vicinity_magnitude} {vicinity_unit} window. Do not use a different range.")
+                    ) 
+
+                messages.extend(
+                    [
+                        ("human", f"Case title: {case_title}"),
+                        ("human", f"Case description: {case_description}"),
+                        ("human", f"Task title: {task_title}"),
+                        ("human", f"Task description: {task_description}"),
+                        ("human", f"Activity: {activity}"),
+                    ]
+                )
 
                 if fields is not None:
                     print(f"Using field info:\n{fields}")

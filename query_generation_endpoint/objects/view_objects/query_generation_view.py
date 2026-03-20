@@ -77,6 +77,10 @@ class QueryGenerationView(APIView):
         activity = data.get("activity")
         fields = data.get("fields")
         prev_activity_critique = data.get("prev_activity_critique", None)
+        earliest_unit = data.get("earliest_unit", None)
+        earliest_magnitude = data.get("earliest_magnitude", None)
+        vicinity_unit = data.get("vicinity_unit", None)
+        vicinity_magnitude = data.get("vicinity_magnitude", None)
         web_search_enabled = data.get("web_search", False)
 
         # -------------------------------------------------
@@ -148,6 +152,10 @@ class QueryGenerationView(APIView):
                     activity=activity,
                     fields=fields,
                     prev_activity_critique=prev_activity_critique,
+                    earliest_unit=earliest_unit,
+                    earliest_magnitude=earliest_magnitude,
+                    vicinity_unit=vicinity_unit,
+                    vicinity_magnitude=vicinity_magnitude,
                     web_search_context=context,
                 )
         except ValueError as e:
