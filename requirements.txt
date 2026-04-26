@@ -80,7 +80,7 @@ xxhash==3.5.0
 yarl==1.17.2
 Crawl4AI==0.8.0
 unstructured
-langchain-openai==1.1.7
+langchain-openai==1.1.14
 Markdown
 spacy
 onnxruntime
