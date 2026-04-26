@@ -31,6 +31,8 @@ SECRET_KEY = base64.b64encode(os.urandom(64)).decode("utf-8")
 # Secret API key for verifying the authenticity of the main backend
 API_KEY = os.getenv("API_KEY")
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -54,6 +56,8 @@ INSTALLED_APPS = [
     "relevency_filter_endpoint",
     "summary_endpoint",
     "completion_check_endpoint",
+    "supporting_file_endpoint",
+    "report_generation_endpoint",
 ]
 
 MIDDLEWARE = [
@@ -112,9 +116,11 @@ SEARCH_CACHE_EXPIRY_TIME = os.getenv("SEARCH_CACHE_EXPIRY_TIME")
 TASK_GENERATION_CONFIG_PATH = "task_generation_endpoint/constants/task_generation/config.json"
 ACTIVITY_GENERATION_CONFIG_PATH = "activity_generation_endpoint/constants/activity_generation/config.json"
 QUERY_GENERATION_CONFIG_PATH = "query_generation_endpoint/constants/query_generation/config.json"
+CONFIG_RETRIEVAL_QUERY_CONFIG_PATH = "query_generation_endpoint/constants/config_retrieval_query/config.json"
 RELEVENCY_FILTER_CONFIG_PATH = "relevency_filter_endpoint/constants/relevency_filter/config.json"
 SUMMARY_CONFIG_PATH = "summary_endpoint/constants/summary/config.json"
 COMPLETION_CHECK_CONFIG_PATH = "completion_check_endpoint/constants/completion_check/config.json"
+REPORT_GENERATION_CONFIG_PATH = "report_generation_endpoint/constants/report_generation/config.json"
 
 
 # Password validation

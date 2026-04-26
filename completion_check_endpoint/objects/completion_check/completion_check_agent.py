@@ -12,19 +12,36 @@ class CompletionCheckAgent(LLM):
         self.prompt = _CONFIG["instruction"]
         super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url)
 
-    def check_activity_completeness(
-            self, case_title: str, case_description: str, task_title: str, task_description: str, activity: str, queries: list[str], query_summaries: list[str], web_search_context: dict | None = None
+    def invoke(
+            self,
+            case_title: str,
+            case_description: str,
+            task_title: str,
+            task_description: str,
+            activity: str,
+            queries: list[str],
+            query_summaries: list[str],
+            available_siem_fields: str | None = None,
+            additional_notes: str | None = None,
+            web_search_context: dict | None = None,
     ) -> str:
         messages = [
             ("system", self.prompt),
-            ("human", f"Case title: {case_title}"),
-            ("human", f"Case description: {case_description}"),
-            ("human", f"Task title: {task_title}"),
-            ("human", f"Task description: {task_description}"),
+            ("human", f"# Case title:\n{case_title}\n---"),
+            ("human", f"# Case description:\n{case_description}\n---"),
+            ("human", f"# Task title:\n{task_title}\n---"),
+            ("human", f"# Task description:\n{task_description}\n---"),
+            ("human", f"# Activity:\n{activity}\n---"),
         ]
 
         for query, summary in zip(queries, query_summaries):
-            messages.append(("human", f"Query: {query}\nSummary: {summary}"))
+            messages.append(("human", f"# Query:\n{query}\n---\n# Summary:\n{summary}\n---"))
+        
+        if additional_notes is not None:
+            messages.append(("human", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
+
+        if available_siem_fields is not None:
+            messages.append(("human", f"# Available SIEM fields and their information:\n{available_siem_fields}\n---"))
 
         if web_search_context:
             parts = []

@@ -24,7 +24,7 @@ services:
     container_name: vllm
     volumes:
       - /opt/hf-cache:/root/.cache/huggingface
-    entrypoint: ["vllm", "serve", "--model", "acezxn/ACI_Cyber_Base_GPT_OSS_20B", "--gpu-memory-utilization", "0.5"]
+    entrypoint: ["vllm", "serve", "--model", "acezxn/ACI_Cyber_Base_GPT_OSS_20B", "--gpu-memory-utilization", "0.6"]
     deploy:
       resources:
         reservations:

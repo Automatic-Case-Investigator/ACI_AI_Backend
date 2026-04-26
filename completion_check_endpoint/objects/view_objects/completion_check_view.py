@@ -66,15 +66,23 @@ class ActivityCompletionCheckView(APIView):
         activity = payload.get("activity").strip()
         queries = payload.getlist("queries")
         query_summaries = payload.getlist("query_summaries")
+        additional_notes = payload.get("additional_notes", None)
 
-        response = completion_check_agent.check_activity_completeness(
+        if additional_notes is not None and not isinstance(additional_notes, str):
+            return Response(
+                {"error": "Missing or invalid 'additional_notes' (string or null)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        response = completion_check_agent.invoke(
             case_title=case_title,
             case_description=case_description,
             task_title=task_title,
             task_description=task_description,
             activity=activity,
             queries=queries,
-            query_summaries=query_summaries
+            query_summaries=query_summaries,
+            additional_notes=additional_notes,
         )
 
         return Response({"result": response}, status=status.HTTP_200_OK)

@@ -7,6 +7,7 @@ from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 
 _CONFIG = json.load(open(settings.QUERY_GENERATION_CONFIG_PATH, "r"))
 
+
 class QueryGenerationAgent(LLM):
     """
     Generates queries for a SIEM system using the configured LLM.
@@ -35,13 +36,9 @@ class QueryGenerationAgent(LLM):
         None
         """
         self.rejection_message = "Could not provide answer to the given instructions"
-        super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url)
+        super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url, reasoning_effort="medium", temperature=0.4)
 
-    def fix_queries(
-        self,
-        siem: str = "wazuh",
-        input_str: str = "The user did not provide any inputs"
-    ):
+    def fix_queries(self, siem: str = "wazuh", input_str: str = "The user did not provide any inputs"):
         """
         Returns the syntacticly corrected of generated query. Returns "NOT QUERY"
         if input_str does not contain queries
@@ -73,8 +70,7 @@ class QueryGenerationAgent(LLM):
 
         return super().invoke(messages)
 
-
-    def generate(
+    def invoke(
         self,
         siem: str = "wazuh",
         user_prompt: str | None = None,
@@ -85,10 +81,13 @@ class QueryGenerationAgent(LLM):
         activity: str | None = None,
         fields: str | None = None,
         prev_activity_critique: str | None = None,
+        max_queries_per_iteration: int | None = None,
         earliest_unit: str | None = None,
         earliest_magnitude: int | None = None,
         vicinity_unit: str | None = None,
         vicinity_magnitude: int | None = None,
+        additional_notes: str | None = None,
+        relevant_config_file_contents: dict | None = None,
         web_search_context: dict | None = None,
     ):
         """
@@ -114,6 +113,8 @@ class QueryGenerationAgent(LLM):
             String containing all the fields and their respective type in the SIEM
         prev_activity_critique : str | None
             Critique of the previous activity investigation
+        max_queries_per_iteration : int | None
+            Maximum number of queries the model may generate for this iteration.
         earliest_unit : str | None
             Unit of time for the earliest time from now to find events
         earliest_magnitude : int | None
@@ -122,6 +123,10 @@ class QueryGenerationAgent(LLM):
             Unit of time for the time window of "close together" events
         vicinity_magnitude: int | None
             Magnitude of time for the time window of "close together" events
+        additional_notes : str | None
+            Additional notes from the human SOC analyst expert for the investigation.
+        relevant_config_file_contents : dict | None
+            Mapping of config filename to relevant SIEM config file contents.
         web_search_context : dict | None
             Optional web search results to provide additional context.
 
@@ -143,42 +148,71 @@ class QueryGenerationAgent(LLM):
                 messages = [("system", prompt), ("human", user_prompt)]
             elif all([case_title, case_description, task_title, task_description, activity]):
                 print("Generating query from case\n")
+
                 prompt = _CONFIG["instruction"]["open_search"]["from_case"]
+                
+                if prev_activity_critique:
+                    # Consider a specialized prompt for regenerating queries
+                    prompt = _CONFIG["instruction"]["open_search"]["from_case_regenerate"]
+ 
+
                 messages = [
                     ("system", prompt),
                 ]
 
+                if max_queries_per_iteration is not None:
+                    messages.append(
+                        (
+                            "system",
+                            f"Constraint: Generate at most {max_queries_per_iteration} queries in this iteration. Never exceed this limit.",
+                        )
+                    )
+
                 if earliest_unit is not None and earliest_magnitude is not None:
                     messages.append(
-                        ("system",
-                        f"Constraint: When you are asked to identify recent events, Only include events from the past {earliest_magnitude} {earliest_unit}. Exclude anything outside this range.")
+                        (
+                            "system",
+                            f"Constraint: When you are asked to identify recent events, Only include events from the past {earliest_magnitude} {earliest_unit}. Exclude anything outside this range.",
+                        )
                     )
 
                 if vicinity_unit is not None and vicinity_magnitude is not None:
                     messages.append(
-                        ("system",
-                        f"Constraint: When you are not asked to identify recent events, but instead asked to find events near a timestamp, use a ±{vicinity_magnitude} {vicinity_unit} window. Do not use a different range.")
-                    ) 
+                        (
+                            "system",
+                            f"Constraint: When you are not asked to identify recent events, but instead asked to find events near a timestamp, use a ±{vicinity_magnitude} {vicinity_unit} window. Do not use a different range.",
+                        )
+                    )
 
                 messages.extend(
                     [
-                        ("human", f"Case title: {case_title}"),
-                        ("human", f"Case description: {case_description}"),
-                        ("human", f"Task title: {task_title}"),
-                        ("human", f"Task description: {task_description}"),
-                        ("human", f"Activity: {activity}"),
+                        ("human", f"# Case title:\n{case_title}\n---"),
+                        ("human", f"# Case description:\n{case_description}\n---"),
+                        ("human", f"# Task title:\n{task_title}\n---"),
+                        ("human", f"# Task description:\n{task_description}\n---"),
+                        ("human", f"# Activity:\n{activity}\n---"),
                     ]
                 )
 
-                if fields is not None:
-                    print(f"Using field info:\n{fields}")
-                    messages.append(("human", f"Available fields in SIEM:\n{fields}"))
+                if fields:
+                    print(fields)
+                    messages.append(("human", f"# Available fields in SIEM:\nThe following text contain all the available fields in the SIEM, followed by their corresponding information:\n{fields}\n---"))
 
-                if prev_activity_critique is not None:
-                    print(f"Using critique: {prev_activity_critique}")
-                    messages.append(("human", f"Critique from previous investigation: {prev_activity_critique}"))
+                if prev_activity_critique:
+                    messages.append(("human", f"# Critique from previous investigation:\n{prev_activity_critique}\n---"))
             else:
                 raise ValueError("Invalid arguments for invoke()")
+
+        if additional_notes is not None:
+            messages.append(("human", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
+
+        if relevant_config_file_contents:
+            contents_str = ""
+            for filename, content in relevant_config_file_contents.items():
+                contents_str += f"{filename}: ```\n{content}\n```\n\n"
+
+            print(contents_str)
+            messages.append(("human", f"# Relevant SIEM config file contents:\n{contents_str}\n---"))
 
         if web_search_context:
             web_search_context_str = WebSearcher.context_to_str(web_search_context)

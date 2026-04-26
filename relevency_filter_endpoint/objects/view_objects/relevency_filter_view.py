@@ -66,6 +66,13 @@ class RelevencyFilterView(APIView):
         query = data.get("query")
         event = data.get("event")
         web_search_enabled = data.get("web_search", False)
+        additional_notes = data.get("additional_notes", None)
+
+        if additional_notes is not None and not isinstance(additional_notes, str):
+            return Response(
+                {"error": 'Parameter "additional_notes" must be a string or null'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validates web_search flag
         if isinstance(web_search_enabled, str):
@@ -114,6 +121,7 @@ class RelevencyFilterView(APIView):
             task_title=task_title,
             task_description=task_description,
             activity=activity,
+            additional_notes=additional_notes,
             web_search_context=context,
         )
 

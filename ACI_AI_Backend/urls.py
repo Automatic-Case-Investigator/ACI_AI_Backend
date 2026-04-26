@@ -26,4 +26,7 @@ urlpatterns = [
     path("summary_model/", include("summary_endpoint.urls")),
     path("completion_check_model/", include("completion_check_endpoint.urls")),
     path("correlation_model/", include("correlation_endpoint.urls")),
+    path("supporting_file/", include("supporting_file_endpoint.urls")),
+    path("report_generation_model/", include("report_generation_endpoint.urls")),
+
 ]

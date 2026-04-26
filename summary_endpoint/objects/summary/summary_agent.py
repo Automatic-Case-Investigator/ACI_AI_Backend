@@ -26,12 +26,13 @@ class SummaryAgent(LLM):
             None
         """
         self.prompt = _CONFIG["instruction"]
-        super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url)
+        super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url, reasoning_effort="low")
 
     def summarize_query(
         self,
         query: str,
         events: str,
+        additional_notes: str | None = None,
         web_search_context: dict | None = None,
     ) -> str:
         """Summarize a query and its associated events.
@@ -39,12 +40,21 @@ class SummaryAgent(LLM):
         Parameters:
             query (str): The query to summarize.
             events (str): The events related to the query.
+            additional_notes (str | None): Additional notes from the human SOC analyst expert for the investigation.
             web_search_context (dict or None): Optional web search context.
 
         Returns:
             str: The LLM's output summarizing the query and events.
         """
-        messages = [("system", self.prompt["query_summary"]), ("user", f"Query: {query}"), ("user", f"Events: {events}")]
+        messages = [
+            ("system", self.prompt["query_summary"]),
+            ("user", f"# Query:\n{query}\n---"),
+            ("user", f"# Events:\n{events}\n---")
+        ]
+
+        if additional_notes is not None:
+            messages.append(("user", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
+
         if web_search_context:
             web_search_context_str = WebSearcher.context_to_str(web_search_context)
             messages.append(("system", f"Here are the web search results for the relevant keywords. Treat these results as background knowledge only:\n{web_search_context_str}"))
@@ -61,6 +71,7 @@ class SummaryAgent(LLM):
         activity: str,
         queries: list[str],
         query_summaries: list[str],
+        additional_notes: str | None = None,
         web_search_context: dict | None = None,
     ) -> str:
         """Summarize activity details including queries and their summaries.
@@ -73,6 +84,7 @@ class SummaryAgent(LLM):
             activity (str): Activity description.
             queries (list[str]): List of queries.
             query_summaries (list[str]): Corresponding summaries of the queries.
+            additional_notes (str | None): Additional notes from the human SOC analyst expert for the investigation.
             web_search_context (dict or None): Optional web search context.
 
         Returns:
@@ -80,14 +92,17 @@ class SummaryAgent(LLM):
         """
         messages = [
             ("system", self.prompt["activity_summary"]),
-            ("human", f"Case title: {case_title}"),
-            ("human", f"Case description: {case_description}"),
-            ("human", f"Task title: {task_title}"),
-            ("human", f"Task description: {task_description}"),
+            ("human", f"# Case title:\n{case_title}\n---"),
+            ("human", f"# Case description:\n{case_description}\n---"),
+            ("human", f"# Task title:\n{task_title}\n---"),
+            ("human", f"# Task description:\n{task_description}\n---"),
+            ("human", f"# Activity:\n{activity}\n---"),
         ]
 
         for query, summary in zip(queries, query_summaries):
-            messages.append(("human", f"Query: {query}\nSummary: {summary}"))
+            messages.append(("human", f"# Query:\n{query}\n# Summary:\n{summary}\n---"))
+        if additional_notes is not None:
+            messages.append(("human", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
 
         if web_search_context:
             parts = []

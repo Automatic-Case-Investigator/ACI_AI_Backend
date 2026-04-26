@@ -3,7 +3,7 @@ import json
 from ACI_AI_Backend.llmtool import Tool
 from langchain_openai import ChatOpenAI
 import traceback
-
+from django.conf import settings
 
 class LLM:
     def __init__(
@@ -12,14 +12,23 @@ class LLM:
         model_name: str,
         base_url: str,
         max_regen_tries: int = 10,
+        reasoning_effort: str = "medium",
+        temperature: float = 0.8,
     ):
         if deploy_method == "vllm":
             self.model = ChatOpenAI(
                 model=model_name,
                 base_url=base_url,
-                reasoning_effort="medium",
+                reasoning_effort=reasoning_effort,
                 api_key="",
             )
+            """
+            self.model = ChatOpenAI(
+                model="gpt-5-2025-08-07",
+                reasoning_effort=reasoning_effort,
+                api_key=settings.OPENAI_API_KEY
+            )
+            """ 
         else:
             raise ValueError(f"LLM deployment type unsupported: {deploy_method}")
 
@@ -58,8 +67,13 @@ class LLM:
         tries = 0
 
         while tries < self.max_regen_tries:
-            response = self.model.invoke(messages_all)
-            content = response.content.strip()
+            content = ""
+            try:
+                response = self.model.invoke(messages_all)
+                content = response.content.strip()
+            except:
+                tries += 1
+                continue
 
             try:
                 payload = json.loads(content)

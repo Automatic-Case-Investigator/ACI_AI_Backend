@@ -1,3 +1,4 @@
+from ACI_AI_Backend.objects.web_search.web_searcher import WebSearcher
 from ACI_AI_Backend import settings
 from ACI_AI_Backend.llm import LLM
 import json
@@ -30,7 +31,7 @@ class RelevencyFilterAgent(LLM):
             config = json.load(file)
 
         self.prompt = config["instruction"]
-        super().__init__(deploy_method=deploy_method, model_name=config["model_name"], base_url=base_url)
+        super().__init__(deploy_method=deploy_method, model_name=config["model_name"], base_url=base_url, reasoning_effort="low")
 
     def invoke(
         self,
@@ -42,6 +43,7 @@ class RelevencyFilterAgent(LLM):
         task_title: str = "",
         task_description: str = "",
         activity: str = "",
+        additional_notes: str | None = None,
         web_search_context: dict | None = None,
     ) -> str:
         """
@@ -56,6 +58,7 @@ class RelevencyFilterAgent(LLM):
             task_title (str): Title of the task.
             task_description (str): Description of the task.
             activity (str): Activity description.
+            additional_notes (str | None): Additional notes from the human SOC analyst expert for the investigation.
             web_search_context (dict or None): Context from web search.
 
         Returns:
@@ -70,14 +73,17 @@ class RelevencyFilterAgent(LLM):
         else:
             messages = [
                 ("system", self.prompt),
-                ("human", f"Case title: {case_title}"),
-                ("human", f"Case description: {case_description}"),
-                ("human", f"Task title: {task_title}"),
-                ("human", f"Task description: {task_description}"),
-                ("human", f"Activity: {activity}"),
-                ("human", f"SIEM Query: {query}"),
-                ("human", f"Event queried: {event}"),
+                ("human", f"# Case title:\n{case_title}\n---"),
+                ("human", f"# Case description:\n{case_description}\n---"),
+                ("human", f"# Task title:\n{task_title}\n---"),
+                ("human", f"# Task description:\n{task_description}\n---"),
+                ("human", f"# Activity:\n{activity}\n---"),
+                ("human", f"# SIEM Query:\n{query}\n---"),
+                ("human", f"# Event queried:\n{event}\n---"),
             ]
+
+        if additional_notes is not None:
+            messages.append(("human", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
 
         if web_search_context:
             web_search_context_str = WebSearcher.context_to_str(web_search_context)

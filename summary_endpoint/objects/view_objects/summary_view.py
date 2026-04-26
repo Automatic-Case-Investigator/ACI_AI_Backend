@@ -26,6 +26,7 @@ class QuerySummaryView(APIView):
         payload = request.data or {}
         query = payload.get("query")
         events = payload.get("events")
+        additional_notes = payload.get("additional_notes", None)
 
         print(events)
 
@@ -40,7 +41,17 @@ class QuerySummaryView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        summary = summary_agent.summarize_query(query=query, events=events)
+        if additional_notes is not None and not isinstance(additional_notes, str):
+            return Response(
+                {"error": "Missing or invalid 'additional_notes' (string or null)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        summary = summary_agent.summarize_query(
+            query=query,
+            events=events,
+            additional_notes=additional_notes,
+        )
         return Response({"result": summary}, status=status.HTTP_200_OK)
 
 
@@ -82,6 +93,13 @@ class ActivitySummaryView(APIView):
         activity = payload.get("activity").strip()
         queries = payload.getlist("queries")
         summaries = payload.getlist("query_summaries")
+        additional_notes = payload.get("additional_notes", None)
+
+        if additional_notes is not None and not isinstance(additional_notes, str):
+            return Response(
+                {"error": "Missing or invalid 'additional_notes' (string or null)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         activity_summary = summary_agent.summarize_activity(
             case_title=case_title,
@@ -91,6 +109,7 @@ class ActivitySummaryView(APIView):
             activity=activity,
             queries=queries,
             query_summaries=summaries,
+            additional_notes=additional_notes,
         )
 
         return Response({"result": activity_summary}, status=status.HTTP_200_OK)
