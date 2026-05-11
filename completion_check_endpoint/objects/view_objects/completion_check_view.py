@@ -22,6 +22,7 @@ class ActivityCompletionCheckView(APIView):
     - activity
     - queries
     - query_summaries
+    - fields
 
     Responses:
     - 200: {"result": <completeness assessment>}
@@ -37,9 +38,9 @@ class ActivityCompletionCheckView(APIView):
             "task_description",
             "activity",
             "queries",
-            "query_summaries"
+            "query_summaries",
+            "fields",
         ]
-
 
         missing = []
         empty = []
@@ -66,6 +67,7 @@ class ActivityCompletionCheckView(APIView):
         activity = payload.get("activity").strip()
         queries = payload.getlist("queries")
         query_summaries = payload.getlist("query_summaries")
+        fields = payload.get("fields")
         additional_notes = payload.get("additional_notes", None)
 
         if additional_notes is not None and not isinstance(additional_notes, str):
@@ -82,6 +84,7 @@ class ActivityCompletionCheckView(APIView):
             activity=activity,
             queries=queries,
             query_summaries=query_summaries,
+            available_siem_fields=fields,
             additional_notes=additional_notes,
         )
 

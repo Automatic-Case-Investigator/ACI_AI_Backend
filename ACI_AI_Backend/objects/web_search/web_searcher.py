@@ -37,7 +37,7 @@ class WebSearcher:
         self.ttl_seconds = int(settings.SEARCH_CACHE_EXPIRY_TIME)
 
     @classmethod
-    def context_to_str(web_search_context: dict):
+    def context_to_str(cls, web_search_context: dict):
         parts = []
         for keyword, data in web_search_context.items():
             explanation = data.get("explanation", "")

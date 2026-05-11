@@ -45,7 +45,12 @@ class ReportGenerationAgent(LLM):
         return super().invoke(messages)
 
     def invoke_case(self, case_title: str, case_description: str, task_reports: list[str], report_template: str) -> str:
-        task_reports_text = "---\n\n" + "\n\n---\n\n".join(task_reports) + "\n\n---"
+        separator = "=" * 60
+        task_reports_text = ""
+        
+        for task_report in task_reports:
+            task_reports_text += f"{separator}\n\n{task_report}\n\n{separator}\n\n\n\n"
+
         print(task_reports_text)
         messages = [
             ("system", _CONFIG["instruction"]["case"]),

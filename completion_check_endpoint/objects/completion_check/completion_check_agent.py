@@ -9,7 +9,8 @@ with open(settings.COMPLETION_CHECK_CONFIG_PATH, "r") as file:
 
 class CompletionCheckAgent(LLM):
     def __init__(self, deploy_method: str, base_url: str):
-        self.prompt = _CONFIG["instruction"]
+        self.decision_prompt = _CONFIG["instruction"]["decision"]
+        self.improvement_prompt = _CONFIG["instruction"]["improvement"]
         super().__init__(deploy_method=deploy_method, model_name=_CONFIG["model_name"], base_url=base_url)
 
     def invoke(
@@ -26,7 +27,7 @@ class CompletionCheckAgent(LLM):
             web_search_context: dict | None = None,
     ) -> str:
         messages = [
-            ("system", self.prompt),
+            ("system", self.decision_prompt),
             ("human", f"# Case title:\n{case_title}\n---"),
             ("human", f"# Case description:\n{case_description}\n---"),
             ("human", f"# Task title:\n{task_title}\n---"),
@@ -40,9 +41,6 @@ class CompletionCheckAgent(LLM):
         if additional_notes is not None:
             messages.append(("human", f"# Additional notes from the human SOC analyst expert for the investigation.\n{additional_notes}\n---"))
 
-        if available_siem_fields is not None:
-            messages.append(("human", f"# Available SIEM fields and their information:\n{available_siem_fields}\n---"))
-
         if web_search_context:
             parts = []
             for keyword, data in web_search_context.items():
@@ -52,7 +50,22 @@ class CompletionCheckAgent(LLM):
             if parts:
                 web_search_context_str = "".join(parts)
                 messages.append(("system", f"Here are the web search results for the relevant keywords. Treat these results as background knowledge only:\n{web_search_context_str}"))
-        return super().invoke(messages)
+        
+
+        decision_response = super().invoke(messages)
+
+        if "Final verdict: NO" in decision_response:
+            # If the investigation is incomplete, suggest future improvements based on available SIEM fields
+
+            messages.append(("assistant", decision_response))
+            messages.append(("system", self.improvement_prompt))
+            if available_siem_fields is not None:
+                messages.append(("human", f"# Available SIEM fields and their information:\n{available_siem_fields}\n---"))
+
+            improvement_response = super().invoke(messages)
+            return f"{decision_response}\n\n{improvement_response}"
+
+        return decision_response
 
 
 completion_check_agent = CompletionCheckAgent(deploy_method=settings.DEPLOY_METHOD, base_url=settings.BASE_URL)
